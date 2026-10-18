@@ -1,0 +1,42 @@
+name: WakeMission
+options:
+  bundleIdPrefix: com.wakemission
+  createIntermediateGroups: true
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  WakeMission:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: WakeMission
+    info:
+      path: WakeMission/Info.plist
+      properties:
+        CFBundleDisplayName: WakeMission
+        CFBundleShortVersionString: 1.0.0
+        CFBundleVersion: "1"
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.wakemission.app
+      INFOPLIST_FILE: WakeMission/Info.plist
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      GENERATE_INFOPLIST_FILE: NO
+    frameworks:
+      - framework: AlarmKit.framework
+        implicit: true
+      - framework: AppIntents.framework
+        implicit: true
+      - framework: AVFoundation.framework
+        implicit: true
+      - framework: Vision.framework
+        implicit: true
+      - framework: SwiftData.framework
+        implicit: true
