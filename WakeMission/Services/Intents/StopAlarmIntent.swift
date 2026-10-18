@@ -2,9 +2,9 @@ import Foundation
 import AppIntents
 
 struct StopAlarmIntent: AppIntent {
-    static var title: LocalizedStringResource = "Stop Alarm"
-    static var description = IntentDescription("Stops the active ringing alarm after all missions have been successfully validated.")
-    static var openAppWhenRun: Bool = false
+    static var title: LocalizedStringResource { "Stop Alarm" }
+    static var description: IntentDescription { IntentDescription("Stops the active ringing alarm after all missions have been successfully validated.") }
+    static var openAppWhenRun: Bool { false }
 
     @Parameter(title: "Alarm ID")
     var alarmId: String?

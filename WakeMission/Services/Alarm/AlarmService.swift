@@ -53,8 +53,7 @@ final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
             tintColor: .orange
         )
         
-        var openIntent = OpenAppFromAlarmIntent()
-        openIntent.alarmId = alarmID.uuidString
+        let openIntent = OpenAppFromAlarmIntent(alarmId: alarmID.uuidString)
         
         // Calculate target schedule components
         let calendar = Calendar.current
