@@ -127,7 +127,7 @@ struct AlarmEditView: View {
             alarm.snoozeEnabled = snoozeEnabled
             alarm.missions = missions
             
-            Task {
+            Task { @MainActor in
                 try? await appState.alarmService.update(alarm: alarm)
             }
         } else {
@@ -142,7 +142,7 @@ struct AlarmEditView: View {
             )
             modelContext.insert(newAlarm)
             
-            Task {
+            Task { @MainActor in
                 try? await appState.alarmService.schedule(alarm: newAlarm)
             }
         }

@@ -169,7 +169,7 @@ struct AlarmListView: View {
     private func toggleAlarm(_ alarm: AlarmItem, isEnabled: Bool) {
         alarm.isEnabled = isEnabled
         try? modelContext.save()
-        Task {
+        Task { @MainActor in
             if isEnabled {
                 try? await appState.alarmService.schedule(alarm: alarm)
             } else {
@@ -195,7 +195,7 @@ struct AlarmListView: View {
         modelContext.insert(testAlarm)
         try? modelContext.save()
         
-        Task {
+        Task { @MainActor in
             try? await appState.alarmService.schedule(alarm: testAlarm)
         }
     }

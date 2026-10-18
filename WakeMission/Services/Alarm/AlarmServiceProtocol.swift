@@ -1,6 +1,7 @@
 import Foundation
 
-protocol AlarmServiceProtocol: Sendable {
+@MainActor
+protocol AlarmServiceProtocol: AnyObject, Sendable {
     func requestAuthorization() async -> Bool
     func schedule(alarm: AlarmItem) async throws
     func cancel(id: UUID) async throws

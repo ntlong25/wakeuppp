@@ -17,7 +17,7 @@ final class AlarmAudioPlayer: NSObject, AVAudioPlayerDelegate, @unchecked Sendab
         
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .alarm, options: [.duckOthers])
+            try session.setCategory(.playback, mode: .default, options: [.duckOthers])
             try session.setActive(true)
         } catch {
             print("Failed to configure AVAudioSession: \(error)")

@@ -12,7 +12,8 @@ nonisolated struct WakeMissionMetadata: AlarmMetadata {
 }
 #endif
 
-final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
+@MainActor
+final class AlarmService: AlarmServiceProtocol {
     static let shared = AlarmService()
     
     private init() {}
