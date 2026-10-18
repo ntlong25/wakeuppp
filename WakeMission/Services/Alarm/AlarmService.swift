@@ -5,6 +5,13 @@ import AlarmKit
 #endif
 import AppIntents
 
+#if canImport(AlarmKit)
+@available(iOS 26.0, *)
+nonisolated struct WakeMissionMetadata: AlarmMetadata {
+    var alarmId: String
+}
+#endif
+
 final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
     static let shared = AlarmService()
     
@@ -12,11 +19,15 @@ final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
     
     func requestAuthorization() async -> Bool {
         #if canImport(AlarmKit)
-        do {
-            let state = try await AlarmManager.shared.requestAuthorization()
-            return state == .authorized
-        } catch {
-            print("AlarmKit authorization failed: \(error)")
+        if #available(iOS 26.0, *) {
+            do {
+                let state = try await AlarmManager.shared.requestAuthorization()
+                return state == .authorized
+            } catch {
+                print("AlarmKit authorization failed: \(error)")
+                return false
+            }
+        } else {
             return false
         }
         #else
@@ -27,53 +38,68 @@ final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
     
     func schedule(alarm: AlarmItem) async throws {
         #if canImport(AlarmKit)
-        let alarmID = alarm.id
-        
-        let stopButton = AlarmButton(
-            text: "Start Mission",
-            textColor: .white,
-            systemImageName: "flame.fill"
-        )
-        
-        let secondaryButton = AlarmButton(
-            text: "Wake Up",
-            textColor: .white,
-            systemImageName: "alarm.waves.left.and.right.fill"
-        )
-        
-        let alertPresentation = AlarmPresentation.Alert(
-            title: alarm.label.isEmpty ? "Wake Up!" : alarm.label,
-            stopButton: stopButton,
-            secondaryButton: secondaryButton,
-            secondaryButtonBehavior: .custom
-        )
-        
-        let attributes = AlarmAttributes(
-            presentation: AlarmPresentation(alert: alertPresentation),
-            tintColor: .orange
-        )
-        
-        let openIntent = OpenAppFromAlarmIntent(alarmId: alarmID.uuidString)
-        
-        // Calculate target schedule components
-        let calendar = Calendar.current
-        let targetComponents = calendar.dateComponents([.hour, .minute], from: alarm.time)
-        
-        // Setup schedule configuration
-        let configuration = AlarmManager.AlarmConfiguration(
-            countdownDuration: nil,
-            schedule: .daily(hour: targetComponents.hour ?? 0, minute: targetComponents.minute ?? 0),
-            attributes: attributes,
-            stopIntent: openIntent,
-            secondaryIntent: openIntent,
-            sound: .default
-        )
-        
-        _ = try await AlarmManager.shared.schedule(
-            id: alarmID,
-            configuration: configuration
-        )
-        print("Scheduled alarm \(alarmID) with AlarmKit at \(targetComponents.hour ?? 0):\(targetComponents.minute ?? 0)")
+        if #available(iOS 26.0, *) {
+            let alarmID = alarm.id
+            
+            let stopButton = AlarmButton(
+                text: LocalizedStringResource("Start Mission"),
+                textColor: .white,
+                systemImageName: "flame.fill"
+            )
+            
+            let secondaryButton = AlarmButton(
+                text: LocalizedStringResource("Wake Up"),
+                textColor: .white,
+                systemImageName: "alarm.waves.left.and.right.fill"
+            )
+            
+            let titleString = alarm.label.isEmpty ? "Wake Up!" : alarm.label
+            let alertPresentation = AlarmPresentation.Alert(
+                title: LocalizedStringResource(stringLiteral: titleString),
+                stopButton: stopButton,
+                secondaryButton: secondaryButton,
+                secondaryButtonBehavior: .custom
+            )
+            
+            let attributes = AlarmAttributes<WakeMissionMetadata>(
+                presentation: AlarmPresentation(alert: alertPresentation),
+                metadata: WakeMissionMetadata(alarmId: alarmID.uuidString),
+                tintColor: .orange
+            )
+            
+            let openIntent = OpenAppFromAlarmIntent(alarmId: alarmID.uuidString)
+            
+            // Calculate target schedule components
+            let calendar = Calendar.current
+            let targetComponents = calendar.dateComponents([.hour, .minute], from: alarm.time)
+            let targetHour = targetComponents.hour ?? 0
+            let targetMinute = targetComponents.minute ?? 0
+            
+            let relativeSchedule = Alarm.Schedule.relative(
+                Alarm.Schedule.Relative(
+                    time: .init(hour: targetHour, minute: targetMinute),
+                    repeats: .never
+                )
+            )
+            
+            // Setup schedule configuration
+            let configuration = AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: relativeSchedule,
+                attributes: attributes,
+                stopIntent: openIntent,
+                secondaryIntent: openIntent,
+                sound: .default
+            )
+            
+            _ = try await AlarmManager.shared.schedule(
+                id: alarmID,
+                configuration: configuration
+            )
+            print("Scheduled alarm \(alarmID) with AlarmKit at \(targetHour):\(targetMinute)")
+        } else {
+            print("AlarmKit requires iOS 26.0 or newer")
+        }
         #else
         print("Simulated scheduling alarm \(alarm.id) for \(alarm.formattedTime)")
         #endif
@@ -81,8 +107,10 @@ final class AlarmService: AlarmServiceProtocol, @unchecked Sendable {
     
     func cancel(id: UUID) async throws {
         #if canImport(AlarmKit)
-        try await AlarmManager.shared.cancel(id: id)
-        print("Cancelled alarm \(id) with AlarmKit")
+        if #available(iOS 26.0, *) {
+            try await AlarmManager.shared.cancel(id: id)
+            print("Cancelled alarm \(id) with AlarmKit")
+        }
         #else
         print("Simulated cancel alarm \(id)")
         #endif

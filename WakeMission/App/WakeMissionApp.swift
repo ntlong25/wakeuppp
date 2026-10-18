@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
+#if canImport(AlarmKit)
 import AlarmKit
+#endif
 
 @main
 struct WakeMissionApp: App {

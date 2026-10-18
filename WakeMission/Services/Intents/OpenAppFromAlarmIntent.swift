@@ -1,7 +1,7 @@
 import Foundation
 import AppIntents
 
-struct OpenAppFromAlarmIntent: AppIntent {
+struct OpenAppFromAlarmIntent: LiveActivityIntent {
     static var title: LocalizedStringResource { "Wake Up & Start Mission" }
     static var description: IntentDescription { IntentDescription("Launches WakeMission into the foreground to begin wake-up missions.") }
     static var openAppWhenRun: Bool { true }
