@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import AudioToolbox
 
 final class AlarmAudioPlayer: NSObject, AVAudioPlayerDelegate, @unchecked Sendable {
     static let shared = AlarmAudioPlayer()

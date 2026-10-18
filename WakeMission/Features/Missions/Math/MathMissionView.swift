@@ -115,7 +115,7 @@ struct MathMissionView: View {
             
             solvedCount += 1
             if solvedCount >= requiredCount {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { @MainActor in
                     onCompleted()
                 }
             } else {
@@ -126,7 +126,7 @@ struct MathMissionView: View {
             generator.notificationOccurred(.error)
             
             isErrorShaking = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { @MainActor in
                 isErrorShaking = false
                 currentInput = ""
             }

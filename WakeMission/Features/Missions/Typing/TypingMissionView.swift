@@ -104,7 +104,7 @@ struct TypingMissionView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .onAppear {
             targetPhrase = TypingPhraseGenerator.randomPhrase(for: difficulty)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { @MainActor in
                 isFieldFocused = true
             }
         }
@@ -118,7 +118,7 @@ struct TypingMissionView: View {
             hasSucceeded = true
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { @MainActor in
                 onCompleted()
             }
         }

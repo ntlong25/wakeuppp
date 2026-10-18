@@ -16,21 +16,23 @@ final class CameraService: NSObject, ObservableObject, AVCaptureVideoDataOutputS
     
     func checkPermissions() async -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .video)
+        let isAuthorized: Bool
         switch status {
         case .authorized:
-            self.permissionGranted = true
-            return true
+            isAuthorized = true
         case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            self.permissionGranted = granted
-            return granted
+            isAuthorized = await AVCaptureDevice.requestAccess(for: .video)
         default:
-            self.permissionGranted = false
-            return false
+            isAuthorized = false
         }
+        
+        await MainActor.run {
+            self.permissionGranted = isAuthorized
+        }
+        return isAuthorized
     }
     
-    func startSession(onFrame: @escaping (CVPixelBuffer) -> Void) {
+    func startSession(onFrame: @escaping @Sendable (CVPixelBuffer) -> Void) {
         self.frameHandler = onFrame
         sessionQueue.async { [weak self] in
             guard let self = self else { return }

@@ -35,7 +35,7 @@ final class AppState: ObservableObject {
         self.audioPlayer.stop()
         self.isRinging = false
         if let alarm = activeRingingAlarm {
-            Task {
+            Task { @MainActor in
                 try? await alarmService.cancel(id: alarm.id)
             }
         }
@@ -51,7 +51,7 @@ final class AppState: ObservableObject {
             guard let self = self,
                   let alarmId = notification.userInfo?["alarmId"] as? UUID else { return }
             // Notification handling for alarm triggered via intent
-            Task {
+            Task { @MainActor in
                 await self.handleAlarmTriggered(alarmId: alarmId)
             }
         }

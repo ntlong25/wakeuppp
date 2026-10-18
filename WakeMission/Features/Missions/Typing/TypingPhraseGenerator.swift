@@ -1,6 +1,6 @@
 import Foundation
 
-struct TypingPhraseGenerator {
+struct TypingPhraseGenerator: Sendable {
     static let easyPhrases = [
         "Trust yourself.",
         "Today is a new day.",

@@ -120,7 +120,7 @@ struct PhotoMissionView: View {
     }
     
     private func startCamera() {
-        Task {
+        Task { @MainActor in
             let granted = await cameraService.checkPermissions()
             if granted {
                 cameraService.startSession { pixelBuffer in
@@ -133,7 +133,7 @@ struct PhotoMissionView: View {
                             if self.steadyCounter >= self.requiredSteadyFrames {
                                 let generator = UINotificationFeedbackGenerator()
                                 generator.notificationOccurred(.success)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { @MainActor in
                                     onCompleted()
                                 }
                             }

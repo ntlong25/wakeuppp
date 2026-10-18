@@ -12,7 +12,7 @@ struct MissionSelectorView: View {
                         .foregroundColor(.gray)
                         .font(.subheadline)
                 } else {
-                    ForEach($missions) { $mission in
+                    ForEach(missions) { mission in
                         HStack(spacing: 12) {
                             Image(systemName: mission.type.icon)
                                 .font(.title3)
@@ -31,7 +31,10 @@ struct MissionSelectorView: View {
                             Spacer()
                             
                             // Difficulty picker
-                            Picker("", selection: $mission.difficulty) {
+                            Picker("", selection: Binding(
+                                get: { mission.difficulty },
+                                set: { mission.difficulty = $0 }
+                            )) {
                                 ForEach(MissionDifficulty.allCases) { diff in
                                     Text(diff.rawValue).tag(diff)
                                 }

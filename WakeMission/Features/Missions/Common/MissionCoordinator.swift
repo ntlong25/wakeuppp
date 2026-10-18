@@ -9,9 +9,9 @@ final class MissionCoordinator: ObservableObject {
     @Published var currentMissionCompleted: Bool = false
     
     let alarm: AlarmItem
-    private let onCompleteAll: () -> Void
+    private let onCompleteAll: @MainActor () -> Void
     
-    init(alarm: AlarmItem, onCompleteAll: @escaping () -> Void) {
+    init(alarm: AlarmItem, onCompleteAll: @escaping @MainActor () -> Void) {
         self.alarm = alarm
         self.onCompleteAll = onCompleteAll
         self.missions = alarm.missions.sorted(by: { $0.order < $1.order })
@@ -45,7 +45,7 @@ final class MissionCoordinator: ObservableObject {
     func advanceToNextMission() {
         currentMissionCompleted = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { @MainActor [weak self] in
             guard let self = self else { return }
             self.currentMissionCompleted = false
             if self.currentMissionIndex + 1 < self.missions.count {

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum MissionType: String, Codable, CaseIterable, Identifiable {
+enum MissionType: String, Codable, CaseIterable, Identifiable, Sendable {
     case typing = "Typing"
     case math = "Math"
     case photo = "Photo"
@@ -33,7 +33,7 @@ enum MissionType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum MissionDifficulty: String, Codable, CaseIterable, Identifiable {
+enum MissionDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
     case easy = "Easy"
     case medium = "Medium"
     case hard = "Hard"
@@ -42,7 +42,7 @@ enum MissionDifficulty: String, Codable, CaseIterable, Identifiable {
 }
 
 @Model
-final class MissionItem {
+final class MissionItem: Identifiable {
     @Attribute(.unique) var id: UUID
     var typeRaw: String
     var order: Int

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class AlarmSessionRecord {
+final class AlarmSessionRecord: Identifiable {
     @Attribute(.unique) var id: UUID
     var alarmId: UUID
     var scheduledAt: Date

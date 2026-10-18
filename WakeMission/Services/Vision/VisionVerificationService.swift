@@ -13,7 +13,7 @@ final class VisionVerificationService: @unchecked Sendable {
     
     func verifyFrame(
         pixelBuffer: CVPixelBuffer,
-        completion: @escaping (Float, Bool, String) -> Void
+        completion: @escaping @Sendable @MainActor (Float, Bool, String) -> Void
     ) {
         guard !isProcessing else { return }
         isProcessing = true
@@ -23,7 +23,7 @@ final class VisionVerificationService: @unchecked Sendable {
             
             guard error == nil,
                   let observations = request.results as? [VNClassificationObservation] else {
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { @MainActor in
                     completion(0.0, false, "Looking for target...")
                 }
                 return
@@ -46,7 +46,7 @@ final class VisionVerificationService: @unchecked Sendable {
             }
             
             let isMatched = highestConfidence >= (self?.confidenceThreshold ?? 0.65)
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { @MainActor in
                 let statusText = isMatched ? "Target Found! Keep Steady..." : "Searching for bathroom sink..."
                 completion(highestConfidence, isMatched, statusText)
             }
@@ -57,7 +57,7 @@ final class VisionVerificationService: @unchecked Sendable {
             try handler.perform([request])
         } catch {
             isProcessing = false
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { @MainActor in
                 completion(0.0, false, "Vision error")
             }
         }

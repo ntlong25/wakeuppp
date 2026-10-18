@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class AlarmItem {
+final class AlarmItem: Identifiable {
     @Attribute(.unique) var id: UUID
     var time: Date
     var label: String

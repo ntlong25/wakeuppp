@@ -125,7 +125,7 @@ struct AlarmRingingContainerView: View {
         .onChange(of: coordinator.isAllCompleted) { _, completed in
             if completed {
                 recordSessionCompletion()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { @MainActor in
                     appState.completeAlarm()
                 }
             }

@@ -1,11 +1,11 @@
 import Foundation
 
-struct MathProblem {
+struct MathProblem: Sendable {
     let expression: String
     let answer: Int
 }
 
-struct MathProblemGenerator {
+struct MathProblemGenerator: Sendable {
     static func generate(for difficulty: MissionDifficulty) -> MathProblem {
         switch difficulty {
         case .easy:
