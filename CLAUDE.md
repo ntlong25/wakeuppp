@@ -13,6 +13,9 @@ xcodebuild test -scheme WakeMission -destination 'platform=iOS Simulator,name=iP
 ```
 AlarmKit, lock screen, Silent/Focus, and camera behavior must be tested on a **physical iPhone**.
 
+## Info.plist gotcha
+`xcodegen generate` regenerates `WakeMission/Info.plist` from `info.properties` in `project.yml`, overwriting hand edits. Add any plist key (e.g. `NSAlarmKitUsageDescription`, `NSCameraUsageDescription`) to `project.yml`, not just the plist. A missing AlarmKit key makes `requestAuthorization()` throw.
+
 ## Docs
 - `docs/SPEC.md` – source of truth for behavior. Update it with any behavior change.
 - `docs/PLAN.md` – roadmap and status.

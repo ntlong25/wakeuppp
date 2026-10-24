@@ -24,6 +24,11 @@ targets:
         CFBundleDisplayName: WakeMission
         CFBundleShortVersionString: 1.0.0
         CFBundleVersion: "1"
+        NSAlarmKitUsageDescription: WakeMission requires AlarmKit permission to schedule prominent wake-up alarms that sound reliably through Silent and Focus modes.
+        NSCameraUsageDescription: WakeMission uses the camera solely to verify physical completion of your photo wake-up mission (such as reaching your bathroom sink).
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.wakemission.app
       INFOPLIST_FILE: WakeMission/Info.plist
