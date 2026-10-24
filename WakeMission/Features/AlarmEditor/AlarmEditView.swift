@@ -5,22 +5,19 @@ struct AlarmEditView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var appState: AppState
-    
+
     let alarmToEdit: AlarmItem?
-    
+
     @State private var selectedTime: Date = Date()
     @State private var label: String = "Morning Alarm"
-    @State private var repeatDays: [Int] = [2, 3, 4, 5, 6] // Weekdays default
-    @State private var soundName: String = "Radar"
-    @State private var snoozeEnabled: Bool = false
-    @State private var missions: [MissionItem] = []
-    
-    let availableSounds = ["Radar", "Beacon", "Chime", "Digital Siren", "Cosmic"]
-    
+    @State private var repeatDays: [Int] = [2, 3, 4, 5, 6]
+    @State private var tone: AlarmTone = .classic
+    @State private var missions: [MissionDraft] = []
+    @State private var loaded = false
+
     var body: some View {
         NavigationStack {
             Form {
-                // Wheel Time Picker
                 Section {
                     DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
                         .datePickerStyle(.wheel)
@@ -28,15 +25,13 @@ struct AlarmEditView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .listRowBackground(Color.white.opacity(0.05))
-                
-                // Repeat Days
+
                 Section(header: Text("Repeat")) {
                     RepeatPicker(selectedDays: $repeatDays)
                         .padding(.vertical, 4)
                 }
                 .listRowBackground(Color.white.opacity(0.05))
-                
-                // Alarm Details
+
                 Section {
                     HStack {
                         Text("Label")
@@ -45,26 +40,18 @@ struct AlarmEditView: View {
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(.gray)
                     }
-                    
-                    Picker("Sound", selection: $soundName) {
-                        ForEach(availableSounds, id: \.self) { sound in
-                            Text(sound).tag(sound)
-                        }
+                    Picker("Ringing tone", selection: $tone) {
+                        ForEach(AlarmTone.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    
-                    Toggle("Snooze", isOn: $snoozeEnabled)
-                        .tint(.orange)
                 }
                 .listRowBackground(Color.white.opacity(0.05))
-                
-                // Missions Navigation
+
                 Section {
                     NavigationLink(destination: MissionSelectorView(missions: $missions)) {
                         HStack {
                             Text("Wake-up Missions")
                             Spacer()
-                            Text(missionsSummary)
-                                .foregroundColor(.orange)
+                            Text(missionsSummary).foregroundColor(.orange)
                         }
                     }
                 }
@@ -76,78 +63,86 @@ struct AlarmEditView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(.orange)
+                    Button("Cancel") { dismiss() }.foregroundColor(.orange)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveAlarm()
-                    }
-                    .font(.headline.bold())
-                    .foregroundColor(.orange)
+                    Button("Save") { saveAlarm() }
+                        .font(.headline.bold())
+                        .foregroundColor(.orange)
                 }
             }
-            .onAppear {
-                loadInitialData()
-            }
+            .onAppear { loadInitialData() }
         }
         .preferredColorScheme(.dark)
     }
-    
+
     private var missionsSummary: String {
-        if missions.isEmpty {
-            return "None"
-        }
-        return "\(missions.count) mission\(missions.count > 1 ? "s" : "")"
+        missions.isEmpty ? "None" : "\(missions.count) mission\(missions.count > 1 ? "s" : "")"
     }
-    
+
     private func loadInitialData() {
+        guard !loaded else { return }
+        loaded = true
         if let alarm = alarmToEdit {
             selectedTime = alarm.time
             label = alarm.label
             repeatDays = alarm.repeatDays
-            soundName = alarm.soundName
-            snoozeEnabled = alarm.snoozeEnabled
-            missions = alarm.missions
+            tone = AlarmTone.from(alarm.soundName)
+            missions = alarm.sortedMissions.map(\.draft)
         } else {
-            // Default new alarm with 1 Typing and 1 Math mission
             missions = [
-                MissionItem(type: .typing, order: 0, difficulty: .easy),
-                MissionItem(type: .math, order: 1, difficulty: .medium)
+                MissionDraft(type: .typing, difficulty: .easy),
+                MissionDraft(type: .math, difficulty: .medium)
             ]
         }
     }
-    
+
+    private func makeMissionItems() -> [MissionItem] {
+        missions.enumerated().map { index, draft in
+            MissionItem(type: draft.type, order: index, difficulty: draft.difficulty, configurationData: draft.configurationData)
+        }
+    }
+
+    /// Strips seconds so the alarm fires at hh:mm:00.
+    private var normalizedTime: Date {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: selectedTime)
+        return cal.date(from: comps) ?? selectedTime
+    }
+
     private func saveAlarm() {
-        if let alarm = alarmToEdit {
-            alarm.time = selectedTime
+        let alarm: AlarmItem
+        if let existing = alarmToEdit {
+            alarm = existing
+            alarm.time = normalizedTime
             alarm.label = label
             alarm.repeatDays = repeatDays
-            alarm.soundName = soundName
-            alarm.snoozeEnabled = snoozeEnabled
-            alarm.missions = missions
-            
-            Task { @MainActor in
-                try? await appState.alarmService.update(alarm: alarm)
-            }
+            alarm.soundName = tone.rawValue
+            // Replace missions wholesale; delete the old ones so none are orphaned.
+            let old = alarm.missions
+            alarm.missions = makeMissionItems()
+            old.forEach { modelContext.delete($0) }
         } else {
-            let newAlarm = AlarmItem(
-                time: selectedTime,
+            alarm = AlarmItem(
+                time: normalizedTime,
                 label: label,
                 repeatDays: repeatDays,
                 isEnabled: true,
-                soundName: soundName,
-                snoozeEnabled: snoozeEnabled,
-                missions: missions
+                soundName: tone.rawValue,
+                missions: makeMissionItems()
             )
-            modelContext.insert(newAlarm)
-            
-            Task { @MainActor in
-                try? await appState.alarmService.schedule(alarm: newAlarm)
+            modelContext.insert(alarm)
+        }
+        try? modelContext.save()
+
+        let service = appState.alarmService
+        Task { @MainActor in
+            do {
+                try await service.update(alarm: alarm)
+            } catch {
+                print("Failed to schedule alarm: \(error)")
             }
         }
-        
-        try? modelContext.save()
         dismiss()
     }
 }

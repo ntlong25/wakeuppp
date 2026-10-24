@@ -3,48 +3,54 @@ import SwiftUI
 struct TypingMissionView: View {
     let difficulty: MissionDifficulty
     let onCompleted: () -> Void
-    
+
     @State private var targetPhrase: String = ""
     @State private var userInput: String = ""
-    @FocusState private var isFieldFocused: Bool
     @State private var hasSucceeded: Bool = false
-    
+    @FocusState private var isFieldFocused: Bool
+
+    private var correctPrefix: Int {
+        TypingValidator.correctPrefixLength(input: userInput, target: targetPhrase)
+    }
+
+    private var hasMismatch: Bool {
+        correctPrefix < TypingValidator.normalize(userInput).count
+    }
+
+    private var styledTarget: AttributedString {
+        var text = AttributedString(targetPhrase)
+        let n = min(correctPrefix, targetPhrase.count)
+        let split = text.index(text.startIndex, offsetByCharacters: n)
+        text[text.startIndex..<split].foregroundColor = .green
+        text[split..<text.endIndex].foregroundColor = .white.opacity(0.6)
+        return text
+    }
+
     var body: some View {
         VStack(spacing: 24) {
-            // Header
             VStack(spacing: 8) {
                 HStack {
-                    Image(systemName: "keyboard.fill")
-                        .foregroundColor(.orange)
+                    Image(systemName: "keyboard.fill").foregroundColor(.orange)
                     Text("TYPING MISSION")
                         .font(.caption.bold())
                         .foregroundColor(.orange)
                         .tracking(1.5)
                 }
-                Text("Type the phrase accurately")
+                Text("Type the phrase")
                     .font(.headline)
                     .foregroundColor(.white)
             }
             .padding(.top, 16)
-            
-            // Target Phrase Card
-            VStack(alignment: .leading, spacing: 12) {
-                Text(targetPhrase)
-                    .font(.system(.title3, design: .monospaced, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineSpacing(6)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    )
-            }
-            .padding(.horizontal)
-            
-            // User input area
+
+            Text(styledTarget)
+                .font(.system(.title3, design: .monospaced, weight: .semibold))
+                .lineSpacing(6)
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(16)
+                .padding(.horizontal)
+
             VStack(alignment: .leading, spacing: 8) {
                 TextField("Start typing here...", text: $userInput, axis: .vertical)
                     .focused($isFieldFocused)
@@ -52,15 +58,20 @@ struct TypingMissionView: View {
                     .padding()
                     .background(Color.white.opacity(0.12))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(hasMismatch ? Color.red : Color.clear, lineWidth: 2)
+                    )
                     .foregroundColor(.white)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .onChange(of: userInput) { _, newValue in
-                        checkCompletion(newValue)
+                    .disabled(hasSucceeded)
+                    .onChange(of: userInput) { old, new in
+                        handleChange(old: old, new: new)
                     }
-                
+
                 HStack {
-                    Text("\(userInput.count) / \(targetPhrase.count)")
+                    Text("\(correctPrefix) / \(TypingValidator.normalize(targetPhrase).count)")
                         .font(.caption.monospaced())
                         .foregroundColor(.gray)
                     Spacer()
@@ -73,54 +84,28 @@ struct TypingMissionView: View {
                 .padding(.horizontal, 4)
             }
             .padding(.horizontal)
-            
+
             Spacer()
-            
-            // Action Button
-            Button(action: {
-                if hasSucceeded {
-                    onCompleted()
-                }
-            }) {
-                HStack {
-                    if hasSucceeded {
-                        Image(systemName: "checkmark")
-                        Text("DONE")
-                    } else {
-                        Text("TYPE ALL CHARACTERS")
-                    }
-                }
-                .font(.headline.bold())
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(hasSucceeded ? Color.green : Color.gray.opacity(0.3))
-                .foregroundColor(.white)
-                .cornerRadius(16)
-            }
-            .disabled(!hasSucceeded)
-            .padding(.horizontal)
-            .padding(.bottom, 24)
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .onAppear {
             targetPhrase = TypingPhraseGenerator.randomPhrase(for: difficulty)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { @MainActor in
-                isFieldFocused = true
-            }
+            isFieldFocused = true
         }
     }
-    
-    private func checkCompletion(_ input: String) {
-        let normalizedInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedTarget = targetPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if normalizedInput == normalizedTarget {
+
+    private func handleChange(old: String, new: String) {
+        guard !hasSucceeded else { return }
+        // Reject paste / autofill: a legitimate keystroke adds at most one character.
+        if TypingValidator.isSuspiciousJump(old: old, new: new) {
+            userInput = old
+            return
+        }
+        if TypingValidator.isMatch(input: new, target: targetPhrase) {
             hasSucceeded = true
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { @MainActor in
-                onCompleted()
-            }
+            isFieldFocused = false
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            onCompleted()
         }
     }
 }

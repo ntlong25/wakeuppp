@@ -1,86 +1,78 @@
 import Foundation
 import AVFoundation
-import CoreImage
 
-final class CameraService: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
-    @Published var isRunning: Bool = false
-    @Published var permissionGranted: Bool = false
-    
+/// Back-camera frame source. Frames are analysed synchronously on the camera queue by a caller-supplied
+/// closure; only the (Sendable) analysis result is delivered to the main actor.
+final class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     let captureSession = AVCaptureSession()
-    private let sessionQueue = DispatchQueue(label: "com.wakemission.cameraQueue")
-    private var frameHandler: ((CVPixelBuffer) -> Void)?
-    
-    override init() {
-        super.init()
-    }
-    
-    func checkPermissions() async -> Bool {
-        let status = AVCaptureDevice.authorizationStatus(for: .video)
-        let isAuthorized: Bool
-        switch status {
-        case .authorized:
-            isAuthorized = true
-        case .notDetermined:
-            isAuthorized = await AVCaptureDevice.requestAccess(for: .video)
-        default:
-            isAuthorized = false
-        }
-        
-        await MainActor.run {
-            self.permissionGranted = isAuthorized
-        }
-        return isAuthorized
-    }
-    
-    func startSession(onFrame: @escaping @Sendable (CVPixelBuffer) -> Void) {
-        self.frameHandler = onFrame
-        sessionQueue.async { [weak self] in
-            guard let self = self else { return }
-            guard !self.captureSession.isRunning else { return }
-            
-            self.captureSession.beginConfiguration()
-            self.captureSession.sessionPreset = .vga640x480
-            
-            guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-                  let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
-                  self.captureSession.canAddInput(videoInput) else {
-                self.captureSession.commitConfiguration()
-                return
-            }
-            
-            self.captureSession.addInput(videoInput)
-            
-            let videoOutput = AVCaptureVideoDataOutput()
-            videoOutput.alwaysDiscardsLateVideoFrames = true
-            videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
-            
-            if self.captureSession.canAddOutput(videoOutput) {
-                self.captureSession.addOutput(videoOutput)
-            }
-            
-            self.captureSession.commitConfiguration()
-            self.captureSession.startRunning()
-            
-            DispatchQueue.main.async {
-                self.isRunning = true
-            }
+    private let sessionQueue = DispatchQueue(label: "com.wakemission.camera")
+    private var handler: (@Sendable (CVPixelBuffer) -> Void)?
+    private var configured = false
+    private var lastFrameTime: CFTimeInterval = 0
+    /// Minimum seconds between analysed frames (≈5 fps).
+    private let minFrameInterval: CFTimeInterval = 0.2
+
+    static func requestPermission() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized: return true
+        case .notDetermined: return await AVCaptureDevice.requestAccess(for: .video)
+        default: return false
         }
     }
-    
-    func stopSession() {
-        sessionQueue.async { [weak self] in
-            guard let self = self else { return }
-            if self.captureSession.isRunning {
-                self.captureSession.stopRunning()
+
+    static var isDenied: Bool {
+        let s = AVCaptureDevice.authorizationStatus(for: .video)
+        return s == .denied || s == .restricted
+    }
+
+    func start<Output: Sendable>(
+        analyze: @escaping @Sendable (CVPixelBuffer) -> Output?,
+        onOutput: @escaping @Sendable @MainActor (Output) -> Void
+    ) {
+        sessionQueue.async { [self] in
+            handler = { buffer in
+                if let output = analyze(buffer) {
+                    Task { @MainActor in onOutput(output) }
+                }
             }
-            DispatchQueue.main.async {
-                self.isRunning = false
-            }
+            configureIfNeeded()
+            if !captureSession.isRunning { captureSession.startRunning() }
         }
     }
-    
+
+    func stop() {
+        sessionQueue.async { [self] in
+            handler = nil
+            if captureSession.isRunning { captureSession.stopRunning() }
+        }
+    }
+
+    private func configureIfNeeded() {
+        guard !configured else { return }
+        captureSession.beginConfiguration()
+        captureSession.sessionPreset = .vga640x480
+        defer { captureSession.commitConfiguration() }
+
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: device),
+              captureSession.canAddInput(input) else { return }
+        captureSession.addInput(input)
+
+        let output = AVCaptureVideoDataOutput()
+        output.alwaysDiscardsLateVideoFrames = true
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.setSampleBufferDelegate(self, queue: sessionQueue)
+        if captureSession.canAddOutput(output) {
+            captureSession.addOutput(output)
+            configured = true
+        }
+    }
+
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        frameHandler?(pixelBuffer)
+        let now = CACurrentMediaTime()
+        guard now - lastFrameTime >= minFrameInterval else { return }
+        lastFrameTime = now
+        guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        handler?(buffer)
     }
 }

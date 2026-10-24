@@ -3,26 +3,28 @@ import SwiftData
 
 struct AlarmListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject var appState: AppState
     @Query(sort: \AlarmItem.time) private var alarms: [AlarmItem]
-    
+
     @State private var showingAddSheet = false
     @State private var selectedAlarmForEdit: AlarmItem?
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.edgesIgnoringSafeArea(.all)
-                
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Header Greeting & Next Alarm Banner
                         headerSection
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.12))
-                        
-                        // Alarm List Rows
+
+                        if !appState.isAlarmAuthorized && UserDefaults.standard.bool(forKey: "onboardingDone") {
+                            permissionBanner
+                        }
+
+                        Divider().background(Color.white.opacity(0.12))
+
                         if alarms.isEmpty {
                             emptyStateView
                         } else {
@@ -30,22 +32,22 @@ struct AlarmListView: View {
                                 ForEach(alarms) { alarm in
                                     AlarmRowView(
                                         alarm: alarm,
-                                        onToggle: { isEnabled in
-                                            toggleAlarm(alarm, isEnabled: isEnabled)
-                                        },
-                                        onSelect: {
-                                            selectedAlarmForEdit = alarm
-                                        }
+                                        onToggle: { toggleAlarm(alarm, isEnabled: $0) },
+                                        onSelect: { selectedAlarmForEdit = alarm }
                                     )
                                     .padding(.horizontal, 16)
                                     .background(Color.white.opacity(0.04))
                                     .cornerRadius(16)
+                                    .contextMenu {
+                                        Button(role: .destructive) { delete(alarm) } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
                                 }
                             }
                         }
-                        
-                        // Milestone 0 Quick Test Section
-                        milestoneTestSection
+
+                        testSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -55,44 +57,31 @@ struct AlarmListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Text("WakeMission")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
+                    Text("WakeMission").font(.title2.bold()).foregroundColor(.white)
                 }
-                
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showingAddSheet = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title3.bold())
-                            .foregroundColor(.orange)
+                    Button { showingAddSheet = true } label: {
+                        Image(systemName: "plus").font(.title3.bold()).foregroundColor(.orange)
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                AlarmEditView(alarmToEdit: nil)
-            }
-            .sheet(item: $selectedAlarmForEdit) { alarm in
-                AlarmEditView(alarmToEdit: alarm)
-            }
+            .sheet(isPresented: $showingAddSheet) { AlarmEditView(alarmToEdit: nil) }
+            .sheet(item: $selectedAlarmForEdit) { AlarmEditView(alarmToEdit: $0) }
         }
     }
-    
-    // MARK: - Header
+
+    // MARK: - Sections
+
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(greetingText)
-                .font(.headline)
-                .foregroundColor(.gray)
-            
-            if let nextAlarm = nextActiveAlarm {
+            Text(greetingText).font(.headline).foregroundColor(.gray)
+
+            if let next = nextActiveAlarm {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(nextAlarm.formattedTime)
+                    Text(next.formattedTime)
                         .font(.system(size: 52, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
-                    
-                    Text(nextAlarm.timeRemainingText)
+                    Text(next.timeRemainingText)
                         .font(.title3.bold())
                         .foregroundColor(.orange)
                 }
@@ -103,16 +92,33 @@ struct AlarmListView: View {
             }
         }
     }
-    
-    // MARK: - Empty State
+
+    private var permissionBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Alarm permission is off", systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.bold())
+                .foregroundColor(.yellow)
+            Text("WakeMission can't ring without AlarmKit access.")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            }
+            .font(.caption.bold())
+            .foregroundColor(.orange)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.yellow.opacity(0.1))
+        .cornerRadius(12)
+    }
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "alarm.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.orange.opacity(0.6))
-            Text("No wake-up alarms set")
-                .font(.headline)
-                .foregroundColor(.white)
+            Text("No wake-up alarms set").font(.headline).foregroundColor(.white)
             Text("Tap + to configure your first mission alarm.")
                 .font(.subheadline)
                 .foregroundColor(.gray)
@@ -120,31 +126,27 @@ struct AlarmListView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
     }
-    
-    // MARK: - Milestone 0 Test Helper
-    private var milestoneTestSection: some View {
+
+    private var testSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Milestone 0: AlarmKit Verification")
+            Text("Quick test")
                 .font(.caption.bold())
                 .foregroundColor(.gray)
                 .textCase(.uppercase)
-            
-            Button(action: scheduleMilestoneTestAlarm) {
+
+            Button(action: scheduleTestAlarm) {
                 HStack {
-                    Image(systemName: "bolt.fill")
-                        .foregroundColor(.orange)
+                    Image(systemName: "bolt.fill").foregroundColor(.orange)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Test Alarm in 1 Minute")
+                        Text("Test alarm in 1-2 minutes")
                             .font(.subheadline.bold())
                             .foregroundColor(.white)
-                        Text("Schedules an AlarmKit alert for T+60s to verify lock screen lifecycle.")
+                        Text("Schedules a one-shot alarm to check the lock-screen flow.")
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    Image(systemName: "chevron.right").font(.caption).foregroundColor(.gray)
                 }
                 .padding()
                 .background(Color.white.opacity(0.06))
@@ -153,50 +155,72 @@ struct AlarmListView: View {
         }
         .padding(.top, 16)
     }
-    
+
     // MARK: - Logic
+
     private var greetingText: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good morning ☀️" }
-        if hour < 18 { return "Good afternoon 🌤️" }
-        return "Good evening 👋"
+        if hour < 12 { return "Good morning" }
+        if hour < 18 { return "Good afternoon" }
+        return "Good evening"
     }
-    
+
+    /// Enabled alarm that fires soonest (not merely earliest on the clock).
     private var nextActiveAlarm: AlarmItem? {
-        alarms.first(where: { $0.isEnabled })
+        alarms
+            .filter(\.isEnabled)
+            .compactMap { alarm in alarm.nextFireDate.map { (alarm, $0) } }
+            .min { $0.1 < $1.1 }?
+            .0
     }
-    
+
     private func toggleAlarm(_ alarm: AlarmItem, isEnabled: Bool) {
         alarm.isEnabled = isEnabled
         try? modelContext.save()
+        let service = appState.alarmService
+        let id = alarm.id
         Task { @MainActor in
             if isEnabled {
-                try? await appState.alarmService.schedule(alarm: alarm)
+                try? await service.update(alarm: alarm)
             } else {
-                try? await appState.alarmService.cancel(id: alarm.id)
+                try? await service.cancel(id: id)
             }
         }
     }
-    
-    private func scheduleMilestoneTestAlarm() {
-        let testTime = Date().addingTimeInterval(65)
-        let testAlarm = AlarmItem(
-            time: testTime,
-            label: "Test Alarm (Milestone 0)",
+
+    private func delete(_ alarm: AlarmItem) {
+        let id = alarm.id
+        modelContext.delete(alarm)
+        try? modelContext.save()
+        let service = appState.alarmService
+        Task { @MainActor in try? await service.cancel(id: id) }
+    }
+
+    private func scheduleTestAlarm() {
+        let cal = Calendar.current
+        // Next whole minute at least 60 s from now.
+        let fire = cal.nextDate(
+            after: Date().addingTimeInterval(60),
+            matching: DateComponents(second: 0),
+            matchingPolicy: .nextTime
+        ) ?? Date().addingTimeInterval(90)
+
+        let alarm = AlarmItem(
+            time: fire,
+            label: "Test Alarm",
             repeatDays: [],
             isEnabled: true,
-            soundName: "Radar",
-            snoozeEnabled: false,
             missions: [
                 MissionItem(type: .typing, order: 0, difficulty: .easy),
                 MissionItem(type: .math, order: 1, difficulty: .easy)
             ]
         )
-        modelContext.insert(testAlarm)
+        modelContext.insert(alarm)
         try? modelContext.save()
-        
+
+        let service = appState.alarmService
         Task { @MainActor in
-            try? await appState.alarmService.schedule(alarm: testAlarm)
+            do { try await service.schedule(alarm: alarm) } catch { print("Test alarm failed: \(error)") }
         }
     }
 }

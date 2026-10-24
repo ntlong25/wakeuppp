@@ -2,7 +2,7 @@ name: WakeMission
 options:
   bundleIdPrefix: com.wakemission
   createIntermediateGroups: true
-  xcodeVersion: "16.0"
+  xcodeVersion: "26.0"
 
 settings:
   base:
@@ -27,7 +27,6 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.wakemission.app
       INFOPLIST_FILE: WakeMission/Info.plist
-      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       GENERATE_INFOPLIST_FILE: NO
     frameworks:
       - framework: AlarmKit.framework
@@ -40,3 +39,23 @@ targets:
         implicit: true
       - framework: SwiftData.framework
         implicit: true
+
+  WakeMissionTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: WakeMissionTests
+    dependencies:
+      - target: WakeMission
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  WakeMission:
+    build:
+      targets:
+        WakeMission: all
+    test:
+      targets:
+        - WakeMissionTests

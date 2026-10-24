@@ -10,9 +10,8 @@ final class AlarmSessionRecord: Identifiable {
     var completedAt: Date?
     var missionsCompleted: Int
     var durationSeconds: Double
-    var snoozeCount: Int
     var success: Bool
-    
+
     init(
         id: UUID = UUID(),
         alarmId: UUID,
@@ -21,7 +20,6 @@ final class AlarmSessionRecord: Identifiable {
         completedAt: Date? = nil,
         missionsCompleted: Int = 0,
         durationSeconds: Double = 0,
-        snoozeCount: Int = 0,
         success: Bool = false
     ) {
         self.id = id
@@ -31,7 +29,6 @@ final class AlarmSessionRecord: Identifiable {
         self.completedAt = completedAt
         self.missionsCompleted = missionsCompleted
         self.durationSeconds = durationSeconds
-        self.snoozeCount = snoozeCount
         self.success = success
     }
 }

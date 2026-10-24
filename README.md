@@ -4,6 +4,8 @@
 
 WakeMission là ứng dụng báo thức iOS thế hệ mới, ứng dụng hệ thống **Apple AlarmKit** kết hợp **App Intents** và chuỗi nhiệm vụ **Wake-up Missions** tuần tự (Typing, Math, Photo verification).
 
+> **Cập nhật:** cấu trúc thư mục và hành vi chi tiết nằm trong [`CLAUDE.md`](CLAUDE.md), [`docs/SPEC.md`](docs/SPEC.md) và [`docs/PLAN.md`](docs/PLAN.md). Yêu cầu **iOS 26 / Xcode 26** (AlarmKit). Mã chưa từng được biên dịch trên Mac - chạy `xcodegen generate` rồi build/test đầu tiên.
+
 ---
 
 ## 🛠 Tech Stack

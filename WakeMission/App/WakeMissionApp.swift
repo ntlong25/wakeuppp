@@ -1,23 +1,16 @@
 import SwiftUI
 import SwiftData
-#if canImport(AlarmKit)
-import AlarmKit
-#endif
 
 @main
 struct WakeMissionApp: App {
     @StateObject private var appState = AppState()
-    
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            AlarmItem.self,
-            MissionItem.self,
-            AlarmSessionRecord.self
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @Environment(\.scenePhase) private var scenePhase
 
+    let sharedModelContainer: ModelContainer = {
+        let schema = Schema([AlarmItem.self, MissionItem.self, AlarmSessionRecord.self])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -25,15 +18,21 @@ struct WakeMissionApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environmentObject(appState)
+                .preferredColorScheme(.dark)
                 .task {
-                    await appState.initialize()
+                    appState.initialize(context: sharedModelContainer.mainContext)
+                    await appState.requestAlarmAuthorizationIfOnboarded()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { appState.consumePending() }
                 }
                 .fullScreenCover(isPresented: $appState.isRinging) {
-                    if let ringingAlarm = appState.activeRingingAlarm {
-                        AlarmRingingContainerView(alarm: ringingAlarm)
+                    if let alarm = appState.activeRingingAlarm {
+                        AlarmRingingContainerView(alarm: alarm)
                             .environmentObject(appState)
+                            .preferredColorScheme(.dark)
                     }
                 }
         }
@@ -41,11 +40,20 @@ struct WakeMissionApp: App {
     }
 }
 
-struct ContentView: View {
-    @EnvironmentObject var appState: AppState
-    
+struct RootView: View {
+    @AppStorage("onboardingDone") private var onboardingDone = false
+
     var body: some View {
-        AlarmListView()
-            .preferredColorScheme(.dark)
+        if onboardingDone {
+            TabView {
+                AlarmListView()
+                    .tabItem { Label("Alarms", systemImage: "alarm.fill") }
+                StatsView()
+                    .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
+            }
+            .tint(.orange)
+        } else {
+            OnboardingView { onboardingDone = true }
+        }
     }
 }

@@ -1,109 +1,157 @@
 import SwiftUI
 import AVFoundation
 
+@MainActor
+final class PhotoMissionModel: ObservableObject {
+    @Published var gauge: Float = 0
+    @Published var matched = false
+    @Published var status = "Starting camera..."
+    @Published var showEscape = false
+    @Published var completed = false
+
+    let camera = CameraService()
+    private let analyzer: PhotoFrameAnalyzer
+    private var decider = PhotoMatchDecider()
+    private var escapeTask: Task<Void, Never>?
+    private let escapeDelay: Duration = .seconds(90)
+
+    var onCompleted: () -> Void = {}
+    var onFallback: () -> Void = {}
+
+    var usesReference: Bool { analyzer.usesReference }
+
+    init(difficulty: MissionDifficulty, configurationData: Data?) {
+        let config = PhotoMissionConfig.decode(configurationData)
+        analyzer = PhotoFrameAnalyzer(referenceData: config?.featurePrint, difficulty: difficulty)
+    }
+
+    func start() async {
+        let granted = await CameraService.requestPermission()
+        guard granted else {
+            status = "Camera access denied - switching to a math task"
+            try? await Task.sleep(for: .seconds(2))
+            onFallback()
+            return
+        }
+        status = usesReference ? "Point at your registered spot" : "Find your bathroom sink"
+
+        let analyzer = self.analyzer
+        camera.start(
+            analyze: { analyzer.analyze($0) },
+            onOutput: { [weak self] score in self?.handle(score) }
+        )
+
+        escapeTask?.cancel()
+        escapeTask = Task { [weak self] in
+            try? await Task.sleep(for: self?.escapeDelay ?? .seconds(90))
+            guard !Task.isCancelled else { return }
+            self?.showEscape = true
+        }
+    }
+
+    func stop() {
+        escapeTask?.cancel()
+        camera.stop()
+    }
+
+    private func handle(_ score: FrameScore) {
+        guard !completed else { return }
+        gauge = score.gauge
+        matched = score.matched
+        let done = decider.ingest(matched: score.matched, luma: score.luma)
+
+        if done {
+            completed = true
+            status = "Verified!"
+            stop()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            onCompleted()
+        } else if score.matched && !decider.isFeedLive {
+            status = "Move the camera slightly"
+        } else if score.matched {
+            status = "Target found! Hold steady..."
+        } else {
+            status = usesReference ? "Point at your registered spot" : "Searching for your bathroom sink..."
+        }
+    }
+}
+
 struct PhotoMissionView: View {
     let difficulty: MissionDifficulty
+    let configurationData: Data?
     let onCompleted: () -> Void
-    
-    @StateObject private var cameraService = CameraService()
-    @State private var confidence: Float = 0.0
-    @State private var statusMessage: String = "Find your bathroom sink"
-    @State private var steadyCounter: Int = 0
-    private let requiredSteadyFrames = 4
-    
+    let onFallback: () -> Void
+
+    @StateObject private var model: PhotoMissionModel
+
+    init(difficulty: MissionDifficulty, configurationData: Data?, onCompleted: @escaping () -> Void, onFallback: @escaping () -> Void) {
+        self.difficulty = difficulty
+        self.configurationData = configurationData
+        self.onCompleted = onCompleted
+        self.onFallback = onFallback
+        _model = StateObject(wrappedValue: PhotoMissionModel(difficulty: difficulty, configurationData: configurationData))
+    }
+
     var body: some View {
-        ZStack {
-            Color.black.edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 20) {
-                // Header
-                VStack(spacing: 6) {
-                    HStack {
-                        Image(systemName: "camera.fill")
-                            .foregroundColor(.orange)
-                        Text("PHOTO MISSION")
-                            .font(.caption.bold())
-                            .foregroundColor(.orange)
-                            .tracking(1.5)
-                    }
-                    Text("Go to your bathroom sink")
-                        .font(.headline)
+        VStack(spacing: 20) {
+            VStack(spacing: 6) {
+                HStack {
+                    Image(systemName: "camera.fill").foregroundColor(.orange)
+                    Text("PHOTO MISSION")
+                        .font(.caption.bold())
+                        .foregroundColor(.orange)
+                        .tracking(1.5)
+                }
+                Text(model.usesReference ? "Go to your registered spot" : "Go to your bathroom sink")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+            .padding(.top, 16)
+
+            ZStack {
+                CameraPreviewView(session: model.camera.captureSession)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(model.matched ? Color.green : Color.white.opacity(0.3), lineWidth: 3)
+                VStack {
+                    Spacer()
+                    Text(model.status)
+                        .font(.subheadline.bold())
                         .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(10)
+                        .padding(.bottom, 16)
                 }
-                .padding(.top, 16)
-                
-                // Camera Viewfinder Box
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(confidence > 0.65 ? Color.green : Color.white.opacity(0.3), lineWidth: 3)
-                        )
-                    
-                    // Scanning reticle
-                    VStack {
-                        HStack {
-                            CornerMarker()
-                            Spacer()
-                            CornerMarker()
-                                .rotationEffect(.degrees(90))
-                        }
-                        Spacer()
-                        HStack {
-                            CornerMarker()
-                                .rotationEffect(.degrees(270))
-                            Spacer()
-                            CornerMarker()
-                                .rotationEffect(.degrees(180))
-                        }
-                    }
-                    .padding(28)
-                    
-                    VStack(spacing: 8) {
-                        Image(systemName: confidence > 0.65 ? "checkmark.circle.fill" : "viewfinder")
-                            .font(.system(size: 44))
-                            .foregroundColor(confidence > 0.65 ? .green : .white.opacity(0.7))
-                        
-                        Text(statusMessage)
-                            .font(.subheadline.bold())
-                            .foregroundColor(.white)
-                    }
+            }
+            .frame(height: 380)
+            .padding(.horizontal, 24)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Match")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Text("\(Int(model.gauge * 100))%")
+                        .font(.caption.bold().monospaced())
+                        .foregroundColor(model.matched ? .green : .orange)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 380)
-                .padding(.horizontal, 24)
-                
-                // Confidence gauge
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Recognition Confidence")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Spacer()
-                        Text("\(Int(confidence * 100))%")
-                            .font(.caption.bold().monospaced())
-                            .foregroundColor(confidence > 0.65 ? .green : .orange)
-                    }
-                    
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color.white.opacity(0.15))
-                            Capsule()
-                                .fill(confidence > 0.65 ? Color.green : Color.orange)
-                                .frame(width: geo.size.width * CGFloat(min(max(confidence, 0), 1)))
-                                .animation(.easeOut(duration: 0.2), value: confidence)
-                        }
-                    }
-                    .frame(height: 10)
-                }
-                .padding(.horizontal, 32)
-                
-                Spacer()
-                
-                // Help instruction
-                Text("Point your camera directly at the sink and water tap.")
+                ProgressView(value: Double(min(max(model.gauge, 0), 1)))
+                    .tint(model.matched ? .green : .orange)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            if model.showEscape {
+                Button("Can't scan? Solve math instead", action: onFallback)
+                    .font(.footnote.bold())
+                    .foregroundColor(.orange)
+                    .padding(.bottom, 24)
+            } else {
+                Text("Use the live camera - photos from your library don't count.")
                     .font(.footnote)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
@@ -111,52 +159,12 @@ struct PhotoMissionView: View {
                     .padding(.bottom, 24)
             }
         }
-        .onAppear {
-            startCamera()
+        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .task {
+            model.onCompleted = onCompleted
+            model.onFallback = onFallback
+            await model.start()
         }
-        .onDisappear {
-            cameraService.stopSession()
-        }
-    }
-    
-    private func startCamera() {
-        Task { @MainActor in
-            let granted = await cameraService.checkPermissions()
-            if granted {
-                cameraService.startSession { pixelBuffer in
-                    VisionVerificationService.shared.verifyFrame(pixelBuffer: pixelBuffer) { conf, isMatched, msg in
-                        self.confidence = conf
-                        self.statusMessage = msg
-                        
-                        if isMatched {
-                            self.steadyCounter += 1
-                            if self.steadyCounter >= self.requiredSteadyFrames {
-                                let generator = UINotificationFeedbackGenerator()
-                                generator.notificationOccurred(.success)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { @MainActor in
-                                    onCompleted()
-                                }
-                            }
-                        } else {
-                            self.steadyCounter = 0
-                        }
-                    }
-                }
-            } else {
-                statusMessage = "Camera access required to complete mission"
-            }
-        }
-    }
-}
-
-struct CornerMarker: View {
-    var body: some View {
-        Path { path in
-            path.move(to: CGPoint(x: 0, y: 20))
-            path.addLine(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: 20, y: 0))
-        }
-        .stroke(Color.orange, lineWidth: 3)
-        .frame(width: 20, height: 20)
+        .onDisappear { model.stop() }
     }
 }

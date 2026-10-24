@@ -31,12 +31,6 @@
     <key>NSCameraUsageDescription</key>
     <string>WakeMission uses the camera solely to verify physical completion of your photo wake-up mission (such as reaching your bathroom sink).</string>
     
-    <!-- Audio Background Mode for Alarm Ringing -->
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>audio</string>
-    </array>
-    
     <key>UILaunchScreen</key>
     <dict/>
     <key>UIRequiredDeviceCapabilities</key>

@@ -1,59 +1,64 @@
 import Foundation
 import SwiftUI
 
+struct MissionStep: Identifiable, Equatable {
+    let id = UUID()
+    var type: MissionType
+    var difficulty: MissionDifficulty
+    var configurationData: Data?
+}
+
+/// Runs an alarm's missions in order. Completion callbacks are idempotent per step.
 @MainActor
 final class MissionCoordinator: ObservableObject {
-    @Published var missions: [MissionItem] = []
-    @Published var currentMissionIndex: Int = 0
-    @Published var isAllCompleted: Bool = false
-    @Published var currentMissionCompleted: Bool = false
-    
-    let alarm: AlarmItem
-    private let onCompleteAll: @MainActor () -> Void
-    
-    init(alarm: AlarmItem, onCompleteAll: @escaping @MainActor () -> Void) {
-        self.alarm = alarm
-        self.onCompleteAll = onCompleteAll
-        self.missions = alarm.missions.sorted(by: { $0.order < $1.order })
-        
-        // If no missions configured, default to a quick Math mission
-        if self.missions.isEmpty {
-            self.missions = [
-                MissionItem(type: .math, order: 0, difficulty: .easy)
-            ]
+    @Published private(set) var steps: [MissionStep]
+    @Published private(set) var currentIndex: Int = 0
+    @Published private(set) var isAllCompleted: Bool = false
+
+    private var isAdvancing = false
+
+    init(alarm: AlarmItem) {
+        let configured = alarm.sortedMissions.map {
+            MissionStep(type: $0.type, difficulty: $0.difficulty, configurationData: $0.configurationData)
         }
+        // An alarm with no missions still needs one quick task so it cannot be dismissed with a tap.
+        steps = configured.isEmpty ? [MissionStep(type: .math, difficulty: .easy)] : configured
     }
-    
-    var currentMission: MissionItem? {
-        guard currentMissionIndex < missions.count else { return nil }
-        return missions[currentMissionIndex]
+
+    var currentStep: MissionStep? {
+        steps.indices.contains(currentIndex) ? steps[currentIndex] : nil
     }
-    
-    var totalMissionsCount: Int {
-        missions.count
-    }
-    
+
+    var totalMissionsCount: Int { steps.count }
+
     var currentStepDisplay: String {
-        "Mission \(currentMissionIndex + 1) of \(totalMissionsCount)"
+        "Mission \(min(currentIndex + 1, totalMissionsCount)) of \(totalMissionsCount)"
     }
-    
+
     var overallProgress: Double {
-        guard totalMissionsCount > 0 else { return 1.0 }
-        return Double(currentMissionIndex) / Double(totalMissionsCount)
+        guard totalMissionsCount > 0 else { return 1 }
+        return isAllCompleted ? 1 : Double(currentIndex) / Double(totalMissionsCount)
     }
-    
-    func advanceToNextMission() {
-        currentMissionCompleted = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.currentMissionCompleted = false
-            if self.currentMissionIndex + 1 < self.missions.count {
-                self.currentMissionIndex += 1
+
+    /// Called by a mission view when it succeeds. Ignored unless `stepId` is the current, not-yet-completed step.
+    func complete(stepId: UUID) {
+        guard !isAdvancing, !isAllCompleted, currentStep?.id == stepId else { return }
+        isAdvancing = true
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard let self else { return }
+            if self.currentIndex + 1 < self.steps.count {
+                self.currentIndex += 1
             } else {
                 self.isAllCompleted = true
-                self.onCompleteAll()
             }
+            self.isAdvancing = false
         }
+    }
+
+    /// Escape hatch so a failing photo mission (camera denied, can't find target) never traps the user.
+    func replaceWithMath(stepId: UUID) {
+        guard !isAdvancing, let index = steps.firstIndex(where: { $0.id == stepId }) else { return }
+        steps[index] = MissionStep(type: .math, difficulty: .medium)
     }
 }
