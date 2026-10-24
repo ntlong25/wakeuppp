@@ -1,108 +1,92 @@
-# WakeMission – Technical Spec (v1.0)
+# WakeMission – Technical Spec (v2)
 
-Product rule: **an alarm is only turned off by completing its missions.** No snooze.
+Product rule: **after a Clock alarm is stopped, the user must complete missions; until then, the system alarm keeps coming back.** No snooze, no in-app alarm creation.
 
-Platform: iOS 26+, Swift 6 (strict concurrency), SwiftUI, SwiftData, AlarmKit, App Intents, Vision, AVFoundation.
+Platform: iOS 26+, Swift 6 (strict concurrency), SwiftUI, AlarmKit, App Intents, Vision, AVFoundation. No SwiftData (state is two small UserDefaults blobs).
 
-## 1. Data model (SwiftData)
+## 1. Concept
+- Alarms are created and managed in Apple's **Clock** app (no public API exists to read or edit them from a third-party app).
+- The user adds a one-time **Shortcuts automation**: *Alarm → Is Stopped (and optionally Is Snoozed) → Run Immediately → "Start Wake-up Missions" (WakeMission)*.
+- When the Clock alarm is stopped, the automation runs `StartWakeMissionsIntent` in the background (no UI needed, works locked if "Run Immediately" is honoured by iOS).
+- The intent starts a **session** and arms a WakeMission AlarmKit alarm. The sound is `.default` (the system alarm tone), so it matches Apple's own alarm.
+- The user opens the app via the alarm's button, completes the missions, and the session ends.
 
-### AlarmItem
-| field | type | notes |
-|---|---|---|
-| id | UUID (unique) | also the AlarmKit alarm id |
-| time | Date | only hour/minute are meaningful; seconds are normalised to 0 on save |
-| label | String | |
-| repeatDays | [Int] | 1=Sun … 7=Sat; empty = one-shot |
-| isEnabled | Bool | one-shot alarms are set to false after completion |
-| soundName | String | `AlarmTone` raw value (in-app ringing tone) |
-| missions | [MissionItem] | cascade delete, ordered by `order` |
+## 2. State and data
+### WakeSettings (UserDefaults, JSON, key `com.wakemission.settings`)
+| field | notes |
+|---|---|
+| missions | ordered `[MissionDraft]` (type, difficulty, optional `PhotoMissionConfig` JSON) – one global sequence |
+| ringMode | `RingMode`: every 5 s (default) / 10 s / 30 s / 60 s / continuous (re-arm after 2 s) |
 
-### MissionItem
-`typeRaw` (typing/math/photo), `order`, `difficultyRaw` (easy/medium/hard), `configurationData: Data?` (JSON `PhotoMissionConfig` for photo missions).
+`PhotoMissionConfig { featurePrint: Data, thumbnail: Data }` – `featurePrint` is a secure-coded `VNFeaturePrintObservation`.
 
-`PhotoMissionConfig { featurePrint: Data, thumbnail: Data }` – `featurePrint` is a secure-coded archive of `VNFeaturePrintObservation`.
+### RingingSession (UserDefaults, key `com.wakemission.ringingSession`)
+`startedAt`, `pendingAlarmIds`. Sessions older than 60 min are discarded and never re-armed (runaway protection).
 
-### AlarmSessionRecord
-`id, alarmId, scheduledAt, triggeredAt, completedAt?, missionsCompleted, durationSeconds, success`. Created when ringing starts with `success=false`; updated on completion. A record that stays `success=false` is an abandoned/failed wake-up.
-
-### Editing drafts
-The editor works on value-type `MissionDraft` (id, type, difficulty, configurationData). On save the alarm's missions are replaced (old ones deleted) – no orphans, and Cancel never mutates stored data.
-
-## 2. Alarm lifecycle
-
+## 3. Lifecycle
 ```
-Scheduled ──fire──▶ System alert (AlarmKit)
-   user taps Start Mission / Stop ──▶ OpenAppFromAlarmIntent.perform()
-        1. RingingStore.begin(alarmId)       (persisted; first time only)
-        2. AlarmService.scheduleNags(parent) (first time only)
-   app foreground ──▶ AppState.consumePending() ──▶ Ringing (own audio + missions)
-   all missions done ──▶ AppState.completeAlarm()
-        stop audio · cancelNags · record success · finishOccurrence · RingingStore.clear
+Clock alarm stopped ─▶ Shortcuts automation ─▶ StartWakeMissionsIntent (background)
+     WakeFlow.start(): RingingStore.begin(); AlarmService.armNext(after: ringMode.rearmDelay)
+         ... delay ...
+WakeMission alarm fires (system alert, default tone)
+     user taps Start Mission / Wake Up ─▶ OpenAppFromAlarmIntent (openAppWhenRun)
+         WakeFlow.rearm(): arm the NEXT alarm (only if the session still exists)
+     app opens ─▶ AppState.consumePending() ─▶ missions full-screen
+     user dismisses without finishing, or kills the app ─▶ the armed alarm fires again after `delay`
+all missions done ─▶ AppState.completeWakeUp(): cancelAll(); RingingStore.clear()
 ```
-
 Rules:
-1. **AlarmKit buttons dismiss the system alarm.** The app therefore (a) plays its own looping tone while ringing and (b) schedules **6 nag alarms at +3, +6, … +18 min** (fixed-date AlarmKit alarms using the same intent). They are cancelled on completion. If the user falls back asleep after tapping the button, a nag fires.
-2. **Cold launch safe**: the intent writes `RingingSession` to UserDefaults. `AppState` consumes it on app start and every time the scene becomes active. A session older than 60 min is discarded.
-3. **Resume**: if the app is killed mid-missions and reopened (or a nag is tapped), the active `RingingSession` restarts missions for the same record (`startedAt` and `recordId` preserved).
-4. **Scheduling**: one-shot → `.fixed(nextFireDate)`; repeating → `.relative(.weekly(days))`. `nextFireDate` is computed by `AlarmScheduleMath` (testable).
-5. **finishOccurrence**: one-shot → `isEnabled=false` and cancel; repeating → leave AlarmKit schedule untouched. Never cancel a repeating alarm on completion.
-6. **Audio safety**: in-app audio auto-stops after 10 minutes; missions remain required. (Nags continue to 18 min.)
-7. No snooze anywhere.
+1. **AlarmKit buttons dismiss the alarm they belong to.** The only way to keep ringing is to always have the next alarm already armed. At most one WakeMission alarm is pending at a time.
+2. **Closing the app cannot be prevented by iOS.** It is handled by the pending alarm being system-owned: it fires even if the app is killed. When the user stops it, the intent re-arms the next one and launches the app.
+3. In "every N seconds" mode the alarm also rings while the user is doing missions (each dismissal re-arms). "Continuous" shortens the gap to 2 s.
+4. Cold launch safe: all hand-off goes through `RingingStore`, never in-memory.
+5. Completion cancels the pending alarm and clears the session.
+6. Min delay for `.fixed` alarms in AlarmKit is untested – verify 2 s / 5 s on device.
 
-## 3. Missions
-
-All missions call `onCompleted` **exactly once**. `MissionCoordinator` additionally ignores completions for a non-current step.
+## 4. Missions
+All missions call `onCompleted` **exactly once**; `MissionCoordinator` also ignores completions for a non-current step.
 
 ### Typing
-- Phrase pool by difficulty (easy ≤ 20 chars, medium 40–60, hard 70+).
-- Validation (`TypingValidator`): case-insensitive; normalises curly quotes/dashes and collapses whitespace; trims ends.
-- Live feedback: correct prefix green, remaining gray, mismatch highlights red border.
-- Anti-paste: an input change that adds more than 1 character at once is rejected.
-- Completes automatically on match (no extra button).
+Phrase pool by difficulty. `TypingValidator`: case-insensitive, smart punctuation normalised, whitespace collapsed. Live feedback (green prefix, red border on mismatch). A change adding more than 1 character at once (paste) is rejected. Completes automatically.
 
 ### Math
-- Easy: `a ± b` (2-digit). Medium: add/sub/`a×b` (≤12×15). Hard: `(a×b) − c` with `c < a×b`, always ≥ 0.
-- All answers are non-negative integers (keypad has no minus).
-- Problems required: easy 2, medium 3, hard 4. Wrong answer: shake + haptic, input cleared.
+Easy `a±b`; Medium add/sub/`a×b`; Hard `(a×b)−c` with `c < a×b`. Answers are non-negative. Required problems: 2 / 3 / 4.
 
 ### Photo
-- Live camera only (no library). Back camera, 640×480 BGRA, `alwaysDiscardsLateVideoFrames`, analysed at ≤ 5 fps.
-- **Strategy A – reference match** (when a reference photo is registered): `VNGenerateImageFeaturePrintRequest` per frame; `computeDistance` to the stored print. Match if `distance < threshold` where threshold = easy 0.55 / medium 0.45 / hard 0.35 (**to be calibrated on device**).
-- **Strategy B – fallback** (no reference): `VNClassifyImageRequest`, labels containing sink/washbasin/basin/faucet/bathroom/toilet with confidence ≥ 0.70.
-- **Debounce** (`PhotoMatchDecider`): success after 4 consecutive matching frames; any miss resets.
-- **Anti-cheat**: mean luminance of the last 10 frames must vary (max−min ≥ 0.004) – a perfectly static feed (covered lens / frozen image) cannot pass. Heuristic, not security.
-- **Never stuck**: camera permission denied → immediately fall back to a Math mission; after 90 s without success a "Can't scan? Solve math instead" button appears.
-- Camera session stops on disappear and on success.
+- Live camera only. 640×480 BGRA at ≤ 5 fps.
+- Reference match when registered (`VNGenerateImageFeaturePrintRequest`, distance < 0.55 / 0.45 / 0.35 by difficulty; **calibrate on device**); otherwise `VNClassifyImageRequest` (sink/washbasin/basin/faucet/bathroom/toilet ≥ 0.70).
+- `PhotoMatchDecider`: 4 consecutive matches and a live feed (luma range ≥ 0.004 over 10 frames).
+- Never stuck: camera denied → math immediately; "Can't scan? Solve math instead" after 90 s.
 
-### Registration (editor)
-`ReferenceRegistrationView`: live preview, "Capture" button grabs the next frame, stores feature print + JPEG thumbnail in the draft. Requires camera permission; shows a settings hint when denied.
+### Empty configuration
+If no missions are configured a single easy math mission is used.
 
-## 4. Permissions and onboarding
-First launch shows 3 pages (promise, how it works, permissions). Permissions: AlarmKit (required for scheduling), Camera (optional; photo mission falls back). If AlarmKit is denied the list shows a banner with an Open Settings button and scheduling is skipped.
+## 5. UI (Apple-native look)
+System colours, fonts, grouped `List`, large title, light/dark follows the system, orange accent (as in Clock).
+- **Home** (`HomeView`): Permission row; Missions (→ `MissionSelectorView`); "Ring again" picker; Setup (→ `ShortcutsGuideView`, "Try it now").
+- **Missions**: add/delete/reorder (Edit), difficulty menu, photo reference registration.
+- **Connect to Clock**: numbered Shortcuts steps and an Open Shortcuts button.
+- **Onboarding** (first launch): promise, how it works, permissions (AlarmKit required, Camera optional).
+- **Wake-up flow**: full-screen cover with progress bar and the current mission.
 
-## 5. Stats
-- `StreakCalculator.currentStreak`: consecutive calendar days with ≥ 1 successful session, counting back from today (if none today, from yesterday so the streak is not lost before the user wakes up).
-- Weekly chart: successes per day for the last 7 days.
-- Average wake time: mean time-of-day of `completedAt` for successes in the last 30 days.
-
-## 6. UI notes
-Dark theme, orange accent. Tab bar: Alarms, Stats. List shows the soonest enabled alarm (repeat-aware countdown) and a debug "Test alarm" button (fires in 1–2 min).
-
-## 7. Acceptance criteria / manual test matrix (physical iPhone)
+## 6. Manual test matrix (physical iPhone)
 | # | Scenario | Expected |
 |---|---|---|
-| 1 | Silent switch ON, locked, alarm fires | system alarm sounds |
-| 2 | Focus ON | alarm breaks through |
-| 3 | App force-killed | alarm fires; tapping Start Mission launches into missions |
-| 4 | Tap Start Mission, then lock phone and do nothing | nag fires after 3 min |
-| 5 | Complete all missions | audio stops, nags cancelled (none fire), record success |
-| 6 | Repeating alarm completed | next week's occurrence still scheduled |
-| 7 | One-shot completed | toggle shows off |
-| 8 | Kill app mid-mission, reopen | missions resume |
-| 9 | Camera denied with photo mission | falls back to math |
-| 10 | Typing: paste whole phrase | rejected |
-| 11 | Photo: cover lens / static image | never completes |
-| 12 | Alarm across midnight / DST | fires at local wall-clock time |
+| 1 | "Try it now" | WakeMission alarm fires after ~5 s with the default system tone |
+| 2 | Tap Start Mission, then lock the phone | alarm fires again after the ring delay |
+| 3 | Tap Start Mission, then kill the app | alarm fires again after the ring delay |
+| 4 | Finish all missions | no further alarm fires; session cleared |
+| 5 | Real Clock alarm + Shortcuts automation, phone locked | stopping the Clock alarm triggers the WakeMission alarm |
+| 6 | Silent switch / Focus | alarm still sounds |
+| 7 | Typing: paste whole phrase | rejected |
+| 8 | Photo: camera denied | falls back to math |
+| 9 | Ring mode Continuous / 60 s | gap matches the setting |
+| 10 | Ignore the alarm for 60 min | chain stops (session expires) |
 
-## 8. Out of scope for 1.0
-Snooze, custom sounds import, Apple Watch, widgets, iCloud sync.
+## 7. Known risks
+- Whether "Run Immediately" is available for the Alarm trigger on all iOS versions (incl. 27 beta) is unverified.
+- AlarmKit may rate-limit or reject alarms scheduled only a few seconds ahead.
+- If the automation is deleted or fails, a Clock alarm stopped by the user is not followed by missions (no way to detect this from the app).
+
+## 8. Out of scope
+Reading Clock alarms, per-alarm mission profiles, snooze, stats, widgets, Apple Watch.

@@ -41,15 +41,15 @@ struct ReferenceRegistrationView: View {
             VStack(spacing: 20) {
                 if model.permissionDenied {
                     Spacer()
-                    Image(systemName: "camera.fill").font(.largeTitle).foregroundColor(.gray)
+                    Image(systemName: "camera.fill").font(.largeTitle).foregroundStyle(.secondary)
                     Text("Camera access is off. Enable it in Settings to register a reference photo.")
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal)
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                     }
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     Spacer()
                 } else if let captured = model.captured, let image = UIImage(data: captured.thumbnail) {
                     Image(uiImage: image)
@@ -71,7 +71,7 @@ struct ReferenceRegistrationView: View {
                 } else {
                     Text("Stand where you want to be on wake-up (sink, coffee machine...) and frame it clearly. Good light helps.")
                         .font(.footnote)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     CameraPreviewView(session: model.camera.captureSession)
@@ -88,7 +88,7 @@ struct ReferenceRegistrationView: View {
                 }
             }
             .padding(.top)
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(.systemBackground))
             .navigationTitle("Reference Photo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -97,6 +97,6 @@ struct ReferenceRegistrationView: View {
             .task { await model.start() }
             .onDisappear { model.stop() }
         }
-        .preferredColorScheme(.dark)
+        
     }
 }

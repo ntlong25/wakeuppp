@@ -22,7 +22,7 @@ struct TypingMissionView: View {
         let n = min(correctPrefix, targetPhrase.count)
         let split = text.index(text.startIndex, offsetByCharacters: n)
         text[text.startIndex..<split].foregroundColor = .green
-        text[split..<text.endIndex].foregroundColor = .white.opacity(0.6)
+        text[split..<text.endIndex].foregroundColor = Color.secondary
         return text
     }
 
@@ -30,15 +30,15 @@ struct TypingMissionView: View {
         VStack(spacing: 24) {
             VStack(spacing: 8) {
                 HStack {
-                    Image(systemName: "keyboard.fill").foregroundColor(.orange)
+                    Image(systemName: "keyboard.fill").foregroundStyle(.orange)
                     Text("TYPING MISSION")
                         .font(.caption.bold())
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .tracking(1.5)
                 }
                 Text("Type the phrase")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.top, 16)
 
@@ -47,7 +47,7 @@ struct TypingMissionView: View {
                 .lineSpacing(6)
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.08))
+                .background(Color(.secondarySystemBackground))
                 .cornerRadius(16)
                 .padding(.horizontal)
 
@@ -56,13 +56,13 @@ struct TypingMissionView: View {
                     .focused($isFieldFocused)
                     .font(.system(.body, design: .monospaced))
                     .padding()
-                    .background(Color.white.opacity(0.12))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(hasMismatch ? Color.red : Color.clear, lineWidth: 2)
                     )
-                    .foregroundColor(.white)
+                    .foregroundStyle(.primary)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .disabled(hasSucceeded)
@@ -73,12 +73,12 @@ struct TypingMissionView: View {
                 HStack {
                     Text("\(correctPrefix) / \(TypingValidator.normalize(targetPhrase).count)")
                         .font(.caption.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     if hasSucceeded {
                         Label("Verified", systemImage: "checkmark.circle.fill")
                             .font(.caption.bold())
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                     }
                 }
                 .padding(.horizontal, 4)
@@ -87,7 +87,7 @@ struct TypingMissionView: View {
 
             Spacer()
         }
-        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .background(Color(.systemBackground))
         .onAppear {
             targetPhrase = TypingPhraseGenerator.randomPhrase(for: difficulty)
             isFieldFocused = true

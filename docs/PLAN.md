@@ -1,29 +1,24 @@
 # WakeMission – Revised Plan
 
-Supersedes `wakemission_implementation_plan.md`. See `docs/SPEC.md` for behavior.
+Supersedes `wakemission_implementation_plan.md`. Behaviour is defined in `docs/SPEC.md`.
 
-## Corrections to the original plan
-1. Target is **iOS 26 / Xcode 26** (AlarmKit), not iOS 18/Xcode 16.
-2. AlarmKit stop/secondary buttons dismiss the alarm; continuing to ring requires in-app audio + backup **nag alarms**.
-3. Snooze removed (contradicts product).
-4. Photo mission uses FeaturePrint reference matching with classification fallback and a guaranteed escape (math).
-5. Intents hand off via persisted `RingingStore`, not in-memory notifications.
+## Direction (v2)
+Instead of owning alarms, WakeMission rides on Apple's Clock alarms: a Shortcuts automation ("alarm is stopped") starts the wake-up flow, and a chain of system-owned AlarmKit alarms rings again until the missions are done. The app is only settings + missions.
 
 ## Status
 | Area | Status |
 |---|---|
 | Docs (CLAUDE.md, SPEC, PLAN) | done |
-| Models, schedule math, ringing store, streaks (+tests) | done, **uncompiled** |
-| AlarmService (weekly/fixed, nags), intents | done, **uncompiled** |
-| Typing / Math / Photo missions, registration | done, **uncompiled** |
-| Onboarding, stats, editor drafts | done, **uncompiled** |
-| Compile + unit tests on macOS | TODO (first thing on a Mac) |
-| Physical-device matrix (SPEC §7) | TODO |
-| FeaturePrint threshold calibration | TODO |
-| App icon / asset catalog | TODO |
+| Settings store, RingingStore, AlarmService chain, intents, Shortcuts provider | done, **uncompiled** |
+| Typing / Math / Photo missions, reference registration | done, **uncompiled** |
+| Native-style Home, Missions, Connect-to-Clock guide, Onboarding | done, **uncompiled** |
+| Unit tests (math, typing, photo decider, store, settings) | done, **unrun** |
+| Verify Shortcuts "Alarm is stopped → Run Immediately" while locked on iOS 26/27 | TODO (device) |
+| Verify 2 s / 5 s AlarmKit fixed alarms are accepted | TODO (device) |
+| Calibrate FeaturePrint thresholds | TODO |
+| App icon | TODO |
 
-## Remaining roadmap
-- **Week A (Mac)**: `xcodegen generate`, fix compile errors, run unit tests, run Milestone 0 on device (matrix 1–8).
-- **Week B**: calibrate photo thresholds in low light; tune nag count/interval; accessibility (Dynamic Type, VoiceOver on keypad).
-- **Week C**: TestFlight with 5–10 testers; edge cases (low power, calls, DST, midnight).
-- **Week D**: icon, screenshots, privacy policy, review notes (explain AlarmKit + camera usage, demo "Test alarm"), submit.
+## Next
+1. Device-test matrix in SPEC §6, tune ring delays.
+2. Decide on a "quiet while working" option if the repeated alerts during missions are too noisy.
+3. TestFlight, store assets, privacy policy, review notes (explain AlarmKit, Shortcuts setup, camera).

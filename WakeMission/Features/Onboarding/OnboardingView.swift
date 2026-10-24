@@ -10,28 +10,27 @@ struct OnboardingView: View {
         VStack {
             TabView(selection: $page) {
                 infoPage(icon: "alarm.fill", title: "Wake up. For real.",
-                         text: "An alarm that only stops when you're actually awake.")
+                         text: "Keep using your Clock alarms. WakeMission makes sure you're actually awake before they're over.")
                     .tag(0)
                 infoPage(icon: "figure.walk", title: "Missions get you out of bed",
-                         text: "Type a phrase, solve math, or walk to your sink and show it to the camera.")
+                         text: "After you stop a Clock alarm, type a phrase, solve math, or show your sink to the camera. Until then, the alarm keeps coming back.")
                     .tag(1)
                 permissionPage.tag(2)
             }
             .tabViewStyle(.page)
 
             Button(action: advance) {
-                Text(page < 2 ? "Next" : "Allow & Start")
+                Text(page < 2 ? "Continue" : "Allow & Start")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.orange)
-                    .foregroundColor(.black)
-                    .cornerRadius(16)
+                    .frame(height: 50)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
-        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .background(Color(.systemBackground))
     }
 
     private func advance() {
@@ -49,20 +48,20 @@ struct OnboardingView: View {
     private func infoPage(icon: String, title: String, text: String) -> some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: icon).font(.system(size: 80)).foregroundColor(.orange)
-            Text(title).font(.largeTitle.bold()).foregroundColor(.white).multilineTextAlignment(.center)
-            Text(text).font(.body).foregroundColor(.gray).multilineTextAlignment(.center)
+            Image(systemName: icon).font(.system(size: 80)).foregroundStyle(.orange)
+            Text(title).font(.largeTitle.bold()).multilineTextAlignment(.center)
+            Text(text).font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Spacer()
         }
         .padding(.horizontal, 32)
     }
 
     private var permissionPage: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Spacer()
-            Text("Two permissions").font(.largeTitle.bold()).foregroundColor(.white)
+            Text("Two permissions").font(.largeTitle.bold())
             permissionRow(icon: "alarm", title: "Alarms (required)",
-                          text: "Lets WakeMission ring through Silent mode and Focus.")
+                          text: "Lets WakeMission ring through Silent mode and Focus until you finish.")
             permissionRow(icon: "camera", title: "Camera (optional)",
                           text: "Only for the Photo mission. Without it, a math task is used instead.")
             Spacer()
@@ -72,10 +71,10 @@ struct OnboardingView: View {
 
     private func permissionRow(icon: String, title: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 16) {
-            Image(systemName: icon).font(.title2).foregroundColor(.orange).frame(width: 36)
+            Image(systemName: icon).font(.title2).foregroundStyle(.orange).frame(width: 36)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).foregroundColor(.white)
-                Text(text).font(.subheadline).foregroundColor(.gray)
+                Text(title).font(.headline)
+                Text(text).font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
         }

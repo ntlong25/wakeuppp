@@ -16,22 +16,22 @@ struct MathMissionView: View {
         VStack(spacing: 20) {
             VStack(spacing: 6) {
                 HStack {
-                    Image(systemName: "function").foregroundColor(.orange)
+                    Image(systemName: "function").foregroundStyle(.orange)
                     Text("MATH MISSION")
                         .font(.caption.bold())
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .tracking(1.5)
                 }
                 Text("Solve to continue")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.top, 16)
 
             HStack(spacing: 8) {
                 ForEach(0..<requiredCount, id: \.self) { index in
                     Capsule()
-                        .fill(index < solvedCount ? Color.green : Color.white.opacity(0.2))
+                        .fill(index < solvedCount ? Color.green : Color(.separator))
                         .frame(height: 6)
                 }
             }
@@ -39,25 +39,25 @@ struct MathMissionView: View {
 
             Text("Problem \(min(solvedCount + 1, requiredCount)) of \(requiredCount)")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundStyle(.secondary)
 
             Spacer()
 
             VStack(spacing: 16) {
                 Text(currentProblem.expression)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.primary)
 
                 Text(currentInput.isEmpty ? "?" : currentInput)
                     .font(.system(size: 40, weight: .bold, design: .monospaced))
-                    .foregroundColor(currentInput.isEmpty ? .gray : .orange)
+                    .foregroundStyle(currentInput.isEmpty ? Color.secondary : Color.orange)
                     .frame(minWidth: 160, minHeight: 64)
                     .padding(.horizontal, 24)
-                    .background(Color.white.opacity(0.08))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(16)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(isErrorShaking ? Color.red : Color.white.opacity(0.2), lineWidth: 2)
+                            .stroke(isErrorShaking ? Color.red : Color(.separator), lineWidth: 2)
                     )
                     .offset(x: isErrorShaking ? -10 : 0)
                     .animation(isErrorShaking ? .default.repeatCount(4).speed(3) : .default, value: isErrorShaking)
@@ -76,7 +76,7 @@ struct MathMissionView: View {
             )
             .padding(.bottom, 24)
         }
-        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .background(Color(.systemBackground))
         .onAppear { loadNextProblem() }
     }
 

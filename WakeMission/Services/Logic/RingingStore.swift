@@ -1,16 +1,16 @@
 import Foundation
 
-/// The alarm currently being "worked on" (system alert tapped, missions not finished).
-/// Persisted in UserDefaults so an App Intent can hand off to a cold-launched app.
+/// The wake-up flow currently in progress (a Clock alarm was stopped, missions not finished yet).
+/// Persisted in UserDefaults so App Intents can hand off to a cold-launched app.
 struct RingingSession: Codable, Equatable, Sendable {
-    var alarmId: UUID
     var startedAt: Date
-    var recordId: UUID?
-    var nagIds: [UUID]
+    /// AlarmKit alarm ids armed by us that must be cancelled on completion.
+    var pendingAlarmIds: [UUID]
 }
 
 enum RingingStore {
     private static let key = "com.wakemission.ringingSession"
+    /// Sessions older than this are abandoned and never re-armed.
     static let maxAge: TimeInterval = 60 * 60
 
     static func current(now: Date = Date(), defaults: UserDefaults = .standard) -> RingingSession? {
@@ -33,14 +33,11 @@ enum RingingStore {
         defaults.removeObject(forKey: key)
     }
 
-    /// Starts a session for `alarmId`. Returns true if a new session was created,
-    /// false if one for the same alarm was already active (e.g. a nag alarm was tapped).
+    /// Starts a session. Returns true if a new one was created, false if one is already active.
     @discardableResult
-    static func begin(alarmId: UUID, now: Date = Date(), defaults: UserDefaults = .standard) -> Bool {
-        if let existing = current(now: now, defaults: defaults), existing.alarmId == alarmId {
-            return false
-        }
-        save(RingingSession(alarmId: alarmId, startedAt: now, recordId: nil, nagIds: []), defaults: defaults)
+    static func begin(now: Date = Date(), defaults: UserDefaults = .standard) -> Bool {
+        if current(now: now, defaults: defaults) != nil { return false }
+        save(RingingSession(startedAt: now, pendingAlarmIds: []), defaults: defaults)
         return true
     }
 }

@@ -8,7 +8,7 @@ struct MissionStep: Identifiable, Equatable {
     var configurationData: Data?
 }
 
-/// Runs an alarm's missions in order. Completion callbacks are idempotent per step.
+/// Runs the configured missions in order. Completion callbacks are idempotent per step.
 @MainActor
 final class MissionCoordinator: ObservableObject {
     @Published private(set) var steps: [MissionStep]
@@ -17,11 +17,11 @@ final class MissionCoordinator: ObservableObject {
 
     private var isAdvancing = false
 
-    init(alarm: AlarmItem) {
-        let configured = alarm.sortedMissions.map {
+    init(missions: [MissionDraft]) {
+        let configured = missions.map {
             MissionStep(type: $0.type, difficulty: $0.difficulty, configurationData: $0.configurationData)
         }
-        // An alarm with no missions still needs one quick task so it cannot be dismissed with a tap.
+        // With no missions configured a quick task is still required, so a tap can't dismiss the flow.
         steps = configured.isEmpty ? [MissionStep(type: .math, difficulty: .easy)] : configured
     }
 

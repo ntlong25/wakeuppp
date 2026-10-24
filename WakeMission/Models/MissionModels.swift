@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 enum MissionType: String, Codable, CaseIterable, Identifiable, Sendable {
     case typing = "Typing"
@@ -35,7 +34,7 @@ enum MissionDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 }
 
-/// Stored (JSON) in `MissionItem.configurationData` for photo missions.
+/// Stored (JSON) in `MissionDraft.configurationData` for photo missions.
 struct PhotoMissionConfig: Codable, Equatable, Sendable {
     /// Secure-coded `VNFeaturePrintObservation`.
     var featurePrint: Data
@@ -50,50 +49,10 @@ struct PhotoMissionConfig: Codable, Equatable, Sendable {
     }
 }
 
-/// Value-type editing copy of a mission; the editor never mutates stored models until Save.
-struct MissionDraft: Identifiable, Equatable, Sendable {
+/// One configured mission in the global wake-up sequence.
+struct MissionDraft: Identifiable, Equatable, Codable, Sendable {
     var id = UUID()
     var type: MissionType
     var difficulty: MissionDifficulty = .medium
     var configurationData: Data?
-}
-
-@Model
-final class MissionItem: Identifiable {
-    @Attribute(.unique) var id: UUID
-    var typeRaw: String
-    var order: Int
-    var difficultyRaw: String
-    var configurationData: Data?
-    var alarm: AlarmItem?
-
-    init(
-        id: UUID = UUID(),
-        type: MissionType,
-        order: Int = 0,
-        difficulty: MissionDifficulty = .medium,
-        configurationData: Data? = nil,
-        alarm: AlarmItem? = nil
-    ) {
-        self.id = id
-        self.typeRaw = type.rawValue
-        self.order = order
-        self.difficultyRaw = difficulty.rawValue
-        self.configurationData = configurationData
-        self.alarm = alarm
-    }
-
-    var type: MissionType {
-        get { MissionType(rawValue: typeRaw) ?? .math }
-        set { typeRaw = newValue.rawValue }
-    }
-
-    var difficulty: MissionDifficulty {
-        get { MissionDifficulty(rawValue: difficultyRaw) ?? .medium }
-        set { difficultyRaw = newValue.rawValue }
-    }
-
-    var draft: MissionDraft {
-        MissionDraft(id: id, type: type, difficulty: difficulty, configurationData: configurationData)
-    }
 }

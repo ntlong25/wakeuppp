@@ -21,20 +21,22 @@ AlarmKit, lock screen, Silent/Focus, and camera behavior must be tested on a **p
 - `docs/PLAN.md` – roadmap and status.
 
 ## Architecture
-- `App/` – `WakeMissionApp` (ModelContainer, ringing full-screen cover), `AppState` (auth, ringing state, pending-ring consumption).
-- `Models/` – SwiftData: `AlarmItem`, `MissionItem`, `AlarmSessionRecord`.
-- `Services/Alarm` – `AlarmService` wraps `AlarmManager`; schedules main alarm + backup "nag" alarms.
-- `Services/Intents` – App Intents run by AlarmKit buttons; they only write to `RingingStore` (UserDefaults) because the app may be cold-launched and in-memory notifications are lost.
-- `Services/Audio` – `AlarmAudioPlayer` loops a synthesized tone (no bundled assets).
-- `Services/Camera`, `Services/Vision` – frame capture, FeaturePrint matching, classification fallback, anti-cheat.
-- `Features/` – UI per screen; `Features/Missions/Common/MissionCoordinator` sequences missions.
+Concept: alarms live in Apple's Clock app. A Shortcuts automation ("alarm is stopped") runs `StartWakeMissionsIntent`, which arms a system-owned AlarmKit alarm; stopping it re-arms the next one until the missions are completed. No SwiftData; state is in UserDefaults.
+- `App/` – `WakeMissionApp`, `AppState` (auth, whether the mission cover is shown, completion).
+- `Models/` – `WakeSettings` (missions + `RingMode`, `SettingsStore`), `MissionModels`.
+- `Services/Alarm` – `AlarmService`: arms/cancels the single pending WakeMission alarm (`.default` system sound).
+- `Services/Intents` – `StartWakeMissionsIntent` (Shortcuts), `OpenAppFromAlarmIntent` (AlarmKit buttons), `WakeFlow`. They only touch `RingingStore`/`AlarmService`, never UI, because the app may be cold-launched.
+- `Services/Logic` – pure, unit-tested: `RingingStore`, `TypingValidator`, `PhotoMatchDecider`.
+- `Services/Camera`, `Services/Vision` – frame capture, FeaturePrint matching, classification fallback.
+- `Features/` – `Home` (settings-style root + Shortcuts guide), `Settings` (mission list), `AlarmRinging/WakeUpContainerView`, `Missions/*`, `Onboarding`.
 
 ## Rules and gotchas
-- **AlarmKit stop and secondary buttons both dismiss the system alarm.** Never assume it keeps ringing. After the app opens it plays its own audio, and backup nag alarms re-fire until all missions pass.
-- Finishing an alarm must never `cancel` the repeating schedule; use `AlarmService.finishOccurrence`.
+- **AlarmKit buttons dismiss their alarm.** Ringing continues only because the next alarm is armed before/when the previous one is dismissed. Keep at most one pending WakeMission alarm; completion must call `AlarmService.cancelAll()` then `RingingStore.clear()`.
+- The app cannot read or edit Clock alarms and cannot prevent being closed; the system-owned pending alarm is the safeguard.
 - Mission completion callbacks must fire exactly once.
-- Never allow a state where the user cannot stop the alarm (camera denied, no reference photo, 10-minute safety cutoff) – always provide a fallback.
-- No photo library selection for the Photo mission (anti-cheat); live camera only.
-- No snooze (product philosophy).
+- Never allow a state where the user cannot finish (camera denied, no reference photo): always provide a fallback (math).
+- No photo library selection for the Photo mission; live camera only.
+- No snooze; no Stats screen.
+- UI must look native: system colours/fonts, grouped lists, follow light/dark. Don't hard-code black backgrounds or white text.
 - Swift 6: UI types are `@MainActor`; camera/Vision callbacks hop to main explicitly; don't mutate `@State` from `@Sendable` closures off-main.
 - UI language: English strings; docs may be Vietnamese or English.

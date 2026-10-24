@@ -96,15 +96,15 @@ struct PhotoMissionView: View {
         VStack(spacing: 20) {
             VStack(spacing: 6) {
                 HStack {
-                    Image(systemName: "camera.fill").foregroundColor(.orange)
+                    Image(systemName: "camera.fill").foregroundStyle(.orange)
                     Text("PHOTO MISSION")
                         .font(.caption.bold())
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .tracking(1.5)
                 }
                 Text(model.usesReference ? "Go to your registered spot" : "Go to your bathroom sink")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.top, 16)
 
@@ -112,12 +112,12 @@ struct PhotoMissionView: View {
                 CameraPreviewView(session: model.camera.captureSession)
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(model.matched ? Color.green : Color.white.opacity(0.3), lineWidth: 3)
+                    .stroke(model.matched ? Color.green : Color(.separator), lineWidth: 3)
                 VStack {
                     Spacer()
                     Text(model.status)
                         .font(.subheadline.bold())
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Color.black.opacity(0.6))
@@ -132,11 +132,11 @@ struct PhotoMissionView: View {
                 HStack {
                     Text("Match")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(Int(model.gauge * 100))%")
                         .font(.caption.bold().monospaced())
-                        .foregroundColor(model.matched ? .green : .orange)
+                        .foregroundStyle(model.matched ? Color.green : Color.orange)
                 }
                 ProgressView(value: Double(min(max(model.gauge, 0), 1)))
                     .tint(model.matched ? .green : .orange)
@@ -148,18 +148,18 @@ struct PhotoMissionView: View {
             if model.showEscape {
                 Button("Can't scan? Solve math instead", action: onFallback)
                     .font(.footnote.bold())
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .padding(.bottom, 24)
             } else {
                 Text("Use the live camera - photos from your library don't count.")
                     .font(.footnote)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                     .padding(.bottom, 24)
             }
         }
-        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .background(Color(.systemBackground))
         .task {
             model.onCompleted = onCompleted
             model.onFallback = onFallback

@@ -22,7 +22,7 @@ struct KeypadView: View {
                         }) {
                             keyContent(key)
                                 .font(.title2.bold())
-                                .foregroundColor(.white)
+                                .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 64)
                                 .background(keyBackground(key))
@@ -40,10 +40,10 @@ struct KeypadView: View {
         switch key {
         case "del":
             Image(systemName: "delete.left.fill")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
         case "ok":
             Image(systemName: "checkmark")
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         default:
             Text(key)
         }
@@ -54,9 +54,9 @@ struct KeypadView: View {
         case "ok":
             return Color.orange
         case "del":
-            return Color.white.opacity(0.15)
+            return Color(.separator)
         default:
-            return Color.white.opacity(0.1)
+            return Color(.secondarySystemBackground)
         }
     }
     

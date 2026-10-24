@@ -1,49 +1,47 @@
 import SwiftUI
 
-struct AlarmRingingContainerView: View {
+/// Full-screen mission flow shown while a wake-up flow is in progress.
+struct WakeUpContainerView: View {
     @EnvironmentObject var appState: AppState
-
-    let alarm: AlarmItem
     @StateObject private var coordinator: MissionCoordinator
 
-    init(alarm: AlarmItem) {
-        self.alarm = alarm
-        _coordinator = StateObject(wrappedValue: MissionCoordinator(alarm: alarm))
+    init(missions: [MissionDraft]) {
+        _coordinator = StateObject(wrappedValue: MissionCoordinator(missions: missions))
     }
 
     var body: some View {
         ZStack {
-            Color.black.edgesIgnoringSafeArea(.all)
+            Color(.systemBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
                 header
-                Divider().background(Color.white.opacity(0.1))
+                Divider()
                 missionContent
             }
 
             if coordinator.isAllCompleted {
                 ZStack {
-                    Color.black.opacity(0.85).edgesIgnoringSafeArea(.all)
+                    Color(.systemBackground).opacity(0.95).ignoresSafeArea()
                     VStack(spacing: 16) {
                         Image(systemName: "sun.max.fill")
                             .font(.system(size: 72))
-                            .foregroundColor(.yellow)
+                            .foregroundStyle(.yellow)
                         Text("Good Morning!")
                             .font(.largeTitle.bold())
-                            .foregroundColor(.white)
                         Text("All missions completed. You are awake.")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .transition(.opacity)
             }
         }
+        .tint(.orange)
         .onChange(of: coordinator.isAllCompleted) { _, completed in
             guard completed else { return }
             Task {
                 try? await Task.sleep(for: .milliseconds(1200))
-                await appState.completeAlarm(missionsCompleted: coordinator.totalMissionsCount)
+                await appState.completeWakeUp()
             }
         }
     }
@@ -51,30 +49,17 @@ struct AlarmRingingContainerView: View {
     private var header: some View {
         VStack(spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(alarm.label.isEmpty ? "Wake Up" : alarm.label)
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                    Text(coordinator.currentStepDisplay)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
+                Text("Wake Up")
+                    .font(.title3.bold())
                 Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "speaker.wave.3.fill")
-                    Text("RINGING").font(.caption.bold())
-                }
-                .foregroundColor(.orange)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.orange.opacity(0.15))
-                .cornerRadius(8)
+                Text(coordinator.currentStepDisplay)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
             .padding(.top, 16)
 
             ProgressView(value: coordinator.overallProgress)
-                .tint(.orange)
                 .padding(.horizontal)
                 .animation(.spring(), value: coordinator.overallProgress)
         }

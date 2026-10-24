@@ -42,8 +42,6 @@ targets:
         implicit: true
       - framework: Vision.framework
         implicit: true
-      - framework: SwiftData.framework
-        implicit: true
 
   WakeMissionTests:
     type: bundle.unit-test
