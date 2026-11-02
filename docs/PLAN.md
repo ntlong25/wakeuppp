@@ -16,7 +16,8 @@ Instead of owning alarms, WakeMission rides on Apple's Clock alarms: a Shortcuts
 | Verify Shortcuts "Alarm is stopped → Run Immediately" while locked on iOS 26/27 | TODO (device) |
 | Verify 2 s / 5 s AlarmKit fixed alarms are accepted | TODO (device) |
 | Calibrate FeaturePrint thresholds | TODO |
-| App icon | TODO |
+| App icon | done (`Assets.xcassets/AppIcon`) |
+| Design pass (critique + handoff) | done, **uncompiled**; see `docs/DESIGN.md` |
 
 ## Next
 1. Device-test matrix in SPEC §6, tune ring delays.

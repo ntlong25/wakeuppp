@@ -19,4 +19,4 @@ Chạy trên iPhone thật (chọn Development Team trong Signing).
 1. Mở app, cấp quyền Alarms (và Camera nếu dùng Photo mission).
 2. Chọn missions trong màn hình chính.
 3. Vào **Connect to the Clock app** và làm theo hướng dẫn tạo automation trong Shortcuts: *Alarm → Is Stopped → Run Immediately → Start Wake-up Missions*.
-4. Thử nhanh bằng nút **Try it now** (chuông reo sau ~5 giây).
+4. Thử nhanh bằng nút **Test Wake-Up Flow** (chuông reo sau ~5 giây).

@@ -24,7 +24,7 @@ struct MathProblemGenerator: Sendable {
                 return MathProblem(expression: "\(a) + \(b)", answer: a + b)
             }
             let larger = max(a, b), smaller = min(a, b)
-            return MathProblem(expression: "\(larger) - \(smaller)", answer: larger - smaller)
+            return MathProblem(expression: "\(larger) − \(smaller)", answer: larger - smaller)
 
         case .medium:
             switch Int.random(in: 0...2) {
@@ -33,7 +33,7 @@ struct MathProblemGenerator: Sendable {
                 return MathProblem(expression: "\(a) + \(b)", answer: a + b)
             case 1:
                 let a = Int.random(in: 45...110), b = Int.random(in: 18...44)
-                return MathProblem(expression: "\(a) - \(b)", answer: a - b)
+                return MathProblem(expression: "\(a) − \(b)", answer: a - b)
             default:
                 let a = Int.random(in: 4...12), b = Int.random(in: 6...15)
                 return MathProblem(expression: "\(a) × \(b)", answer: a * b)
@@ -45,7 +45,7 @@ struct MathProblemGenerator: Sendable {
             let b = Int.random(in: 4...12)
             let product = a * b
             let c = Int.random(in: 10...min(30, product - 1))
-            return MathProblem(expression: "(\(a) × \(b)) - \(c)", answer: product - c)
+            return MathProblem(expression: "(\(a) × \(b)) − \(c)", answer: product - c)
         }
     }
 }

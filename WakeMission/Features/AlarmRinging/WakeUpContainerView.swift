@@ -25,7 +25,8 @@ struct WakeUpContainerView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "sun.max.fill")
                             .font(.system(size: 72))
-                            .foregroundStyle(.yellow)
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
                         Text("Good Morning!")
                             .font(.largeTitle.bold())
                         Text("All missions completed. You are awake.")
@@ -36,7 +37,6 @@ struct WakeUpContainerView: View {
                 .transition(.opacity)
             }
         }
-        .tint(.orange)
         .onChange(of: coordinator.isAllCompleted) { _, completed in
             guard completed else { return }
             Task {
@@ -47,23 +47,17 @@ struct WakeUpContainerView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Wake Up")
-                    .font(.title3.bold())
-                Spacer()
-                Text(coordinator.currentStepDisplay)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(coordinator.currentStepDisplay)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
             ProgressView(value: coordinator.overallProgress)
-                .padding(.horizontal)
                 .animation(.spring(), value: coordinator.overallProgress)
+                .accessibilityHidden(true)
         }
-        .padding(.bottom, 12)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.sm + Spacing.xs)
     }
 
     @ViewBuilder

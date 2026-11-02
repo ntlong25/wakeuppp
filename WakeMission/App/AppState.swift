@@ -5,6 +5,8 @@ import SwiftUI
 final class AppState: ObservableObject {
     @Published var isAlarmAuthorized: Bool = false
     @Published var isRinging: Bool = false
+    /// False until the first status check returns, so Home does not flash a warning.
+    @Published var authorizationKnown: Bool = false
 
     let alarmService: AlarmServiceProtocol
     private var observer: NSObjectProtocol?
@@ -20,6 +22,7 @@ final class AppState: ObservableObject {
 
     func requestAlarmAuthorization() async {
         isAlarmAuthorized = await alarmService.requestAuthorization()
+        authorizationKnown = true
     }
 
     /// After onboarding the system prompt has already been shown, so this just refreshes the status.
@@ -34,7 +37,7 @@ final class AppState: ObservableObject {
         isRinging = true
     }
 
-    /// Debug / "Try it now": behaves like the Shortcuts automation firing.
+    /// Debug / "Test Wake-Up Flow": behaves like the Shortcuts automation firing.
     func startTestFlow() async {
         await WakeFlow.start()
         consumePending()

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-WakeMission: native iOS alarm app. An alarm only stops after the user completes wake-up missions (Typing, Math, Photo). Swift 6 (strict concurrency `complete`), SwiftUI, SwiftData, AlarmKit, App Intents, Vision, AVFoundation. Target **iOS 26 / Xcode 26** (AlarmKit requirement).
+WakeMission: native iOS app that follows up Clock alarms with wake-up missions (Typing, Math, Photo). Swift 6 (strict concurrency `complete`), SwiftUI, AlarmKit, App Intents, Vision, AVFoundation. Target **iOS 26 / Xcode 26** (AlarmKit requirement).
 
 ## Environment caveat
 The repo is often edited on Windows, where there is no Swift toolchain. Code cannot be compiled or run there. Keep logic in small pure types (`Services/Logic`, generators) so it is unit-testable on a Mac, and do a careful read-through for Swift 6 concurrency errors before finishing.
@@ -37,6 +37,6 @@ Concept: alarms live in Apple's Clock app. A Shortcuts automation ("alarm is sto
 - Never allow a state where the user cannot finish (camera denied, no reference photo): always provide a fallback (math).
 - No photo library selection for the Photo mission; live camera only.
 - No snooze; no Stats screen.
-- UI must look native: system colours/fonts, grouped lists, follow light/dark. Don't hard-code black backgrounds or white text.
+- UI must look native: system colours/fonts, grouped lists, follow light/dark. Don't hard-code black backgrounds or white text. Use `AccentColor` (via `.tint` / `Color.accentColor`) and `Color.onAccent`, never `.orange`; use `Spacing` / `Radius` from `Core/DesignTokens.swift`. See `docs/DESIGN.md`.
 - Swift 6: UI types are `@MainActor`; camera/Vision callbacks hop to main explicitly; don't mutate `@State` from `@Sendable` closures off-main.
 - UI language: English strings; docs may be Vietnamese or English.

@@ -38,7 +38,7 @@ struct ReferenceRegistrationView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.lg) {
                 if model.permissionDenied {
                     Spacer()
                     Image(systemName: "camera.fill").font(.largeTitle).foregroundStyle(.secondary)
@@ -49,42 +49,47 @@ struct ReferenceRegistrationView: View {
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                     }
-                    .foregroundStyle(.orange)
                     Spacer()
                 } else if let captured = model.captured, let image = UIImage(data: captured.thumbnail) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .continuousCorners(Radius.lg)
                         .padding(.horizontal)
-                    HStack(spacing: 12) {
+                    HStack(spacing: Spacing.sm + Spacing.xs) {
                         Button("Retake") { Task { await model.start() } }
                             .buttonStyle(.bordered)
-                        Button("Use this photo") {
+                        Button {
                             onSave(PhotoMissionConfig(featurePrint: captured.featurePrint, thumbnail: captured.thumbnail))
                             dismiss()
+                        } label: {
+                            Text("Use Photo").foregroundStyle(Color.onAccent)
                         }
                         .buttonStyle(.borderedProminent)
                     }
-                    .tint(.orange)
                     Spacer()
                 } else {
-                    Text("Stand where you want to be on wake-up (sink, coffee machine...) and frame it clearly. Good light helps.")
+                    Text("Stand where you want to end up, like your sink or coffee machine, and frame it clearly.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     CameraPreviewView(session: model.camera.captureSession)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                        .frame(height: 420)
+                        .background(Color(.secondarySystemBackground))
+                        .continuousCorners(Radius.lg)
+                        .frame(maxHeight: .infinity)
                         .padding(.horizontal)
+                        .accessibilityHidden(true)
                     Button {
                         model.capture()
                     } label: {
-                        Circle().fill(Color.orange).frame(width: 72, height: 72)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 3).padding(-6))
+                        Circle().fill(Color.accentColor).frame(width: 64, height: 64)
+                            .padding(6)
+                            .overlay(Circle().stroke(Color.primary, lineWidth: 3))
                     }
-                    Spacer()
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Take reference photo")
+                    .padding(.bottom, Spacing.md)
                 }
             }
             .padding(.top)

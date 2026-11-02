@@ -9,7 +9,7 @@ struct MissionSelectorView: View {
         List {
             Section {
                 if missions.isEmpty {
-                    Text("No missions selected. A quick math task is used so the alarm can't be dismissed with a tap.")
+                    Text("With no missions, you'll get one quick math problem.")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach($missions) { $mission in
@@ -17,7 +17,7 @@ struct MissionSelectorView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: mission.type.icon)
                                     .font(.title3)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.tint)
                                     .frame(width: 32)
 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -41,14 +41,14 @@ struct MissionSelectorView: View {
                                     registeringMissionId = mission.id
                                 } label: {
                                     Label(
-                                        mission.configurationData == nil ? "Register reference photo" : "Re-register reference photo",
+                                        mission.configurationData == nil ? "Add Reference Photo" : "Change Reference Photo",
                                         systemImage: mission.configurationData == nil ? "camera.badge.plus" : "checkmark.seal.fill"
                                     )
                                     .font(.subheadline)
                                 }
                                 .buttonStyle(.borderless)
                                 if mission.configurationData == nil {
-                                    Text("Without a reference, any bathroom sink scene is accepted.")
+                                    Text("Without a photo, any bathroom sink is accepted.")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -60,7 +60,7 @@ struct MissionSelectorView: View {
                     .onMove { missions.move(fromOffsets: $0, toOffset: $1) }
                 }
             } footer: {
-                Text("Missions run in this order. Drag to reorder with Edit.")
+                Text("Missions run in this order. Tap Edit to reorder.")
             }
 
             Section {
@@ -107,7 +107,7 @@ struct AddMissionSheet: View {
                     HStack(spacing: 16) {
                         Image(systemName: type.icon)
                             .font(.title2)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.tint)
                             .frame(width: 40)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(type.title).foregroundStyle(.primary)

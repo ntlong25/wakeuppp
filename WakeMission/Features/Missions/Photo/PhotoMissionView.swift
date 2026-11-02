@@ -93,72 +93,51 @@ struct PhotoMissionView: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 6) {
-                HStack {
-                    Image(systemName: "camera.fill").foregroundStyle(.orange)
-                    Text("PHOTO MISSION")
-                        .font(.caption.bold())
-                        .foregroundStyle(.orange)
-                        .tracking(1.5)
-                }
-                Text(model.usesReference ? "Go to your registered spot" : "Go to your bathroom sink")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-            }
-            .padding(.top, 16)
+        VStack(spacing: Spacing.md) {
+            MissionHeader(
+                title: model.usesReference ? "Go to Your Spot" : "Go to Your Sink",
+                subtitle: "Point the camera at it and hold steady"
+            )
 
-            ZStack {
+            ZStack(alignment: .bottom) {
+                Color(.secondarySystemBackground)
                 CameraPreviewView(session: model.camera.captureSession)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(model.matched ? Color.green : Color(.separator), lineWidth: 3)
-                VStack {
-                    Spacer()
-                    Text(model.status)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(10)
-                        .padding(.bottom, 16)
-                }
+                    .accessibilityHidden(true)
+                Text(model.status)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Spacing.sm + Spacing.xs)
+                    .padding(.vertical, Spacing.sm)
+                    .background(.black.opacity(0.6), in: Capsule())
+                    .padding(.bottom, Spacing.md)
             }
-            .frame(height: 380)
-            .padding(.horizontal, 24)
+            .continuousCorners(Radius.lg)
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                    .stroke(model.matched ? Color.green : Color.clear, lineWidth: 3)
+            )
+            .frame(maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Match")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(Int(model.gauge * 100))%")
-                        .font(.caption.bold().monospaced())
-                        .foregroundStyle(model.matched ? Color.green : Color.orange)
-                }
-                ProgressView(value: Double(min(max(model.gauge, 0), 1)))
-                    .tint(model.matched ? .green : .orange)
+            ProgressView(value: Double(min(max(model.gauge, 0), 1))) {
+                Text("Match")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 32)
-
-            Spacer()
+            .accessibilityValue("\(Int(model.gauge * 100)) percent")
 
             if model.showEscape {
-                Button("Can't scan? Solve math instead", action: onFallback)
-                    .font(.footnote.bold())
-                    .foregroundStyle(.orange)
-                    .padding(.bottom, 24)
+                Button("Can't Scan? Solve Math Instead", action: onFallback)
+                    .buttonStyle(.bordered)
+                    .frame(minHeight: 44)
             } else {
-                Text("Use the live camera - photos from your library don't count.")
+                Text("Live camera only. Saved photos don't count.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                    .padding(.bottom, 24)
+                    .frame(minHeight: 44)
             }
         }
+        .padding(Spacing.md)
         .background(Color(.systemBackground))
         .task {
             model.onCompleted = onCompleted

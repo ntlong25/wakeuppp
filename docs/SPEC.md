@@ -62,8 +62,8 @@ Easy `a±b`; Medium add/sub/`a×b`; Hard `(a×b)−c` with `c < a×b`. Answers a
 If no missions are configured a single easy math mission is used.
 
 ## 5. UI (Apple-native look)
-System colours, fonts, grouped `List`, large title, light/dark follows the system, orange accent (as in Clock).
-- **Home** (`HomeView`): Permission row; Missions (→ `MissionSelectorView`); "Ring again" picker; Setup (→ `ShortcutsGuideView`, "Try it now").
+System colours, fonts, grouped `List`, large title, light/dark follows the system, `AccentColor` burnt orange. Tokens, states and rationale: `docs/DESIGN.md`.
+- **Home** (`HomeView`): alarm warning (only if denied); "Finish setup" (until the user confirms); Missions (→ `MissionSelectorView`) and "Ring Again" picker; Connect to Clock (→ `ShortcutsGuideView`) and "Test Wake-Up Flow".
 - **Missions**: add/delete/reorder (Edit), difficulty menu, photo reference registration.
 - **Connect to Clock**: numbered Shortcuts steps and an Open Shortcuts button.
 - **Onboarding** (first launch): promise, how it works, permissions (AlarmKit required, Camera optional).
@@ -72,7 +72,7 @@ System colours, fonts, grouped `List`, large title, light/dark follows the syste
 ## 6. Manual test matrix (physical iPhone)
 | # | Scenario | Expected |
 |---|---|---|
-| 1 | "Try it now" | WakeMission alarm fires after ~5 s with the default system tone |
+| 1 | "Test Wake-Up Flow" | WakeMission alarm fires after ~5 s with the default system tone |
 | 2 | Tap Start Mission, then lock the phone | alarm fires again after the ring delay |
 | 3 | Tap Start Mission, then kill the app | alarm fires again after the ring delay |
 | 4 | Finish all missions | no further alarm fires; session cleared |

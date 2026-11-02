@@ -17,75 +17,65 @@ struct TypingMissionView: View {
         correctPrefix < TypingValidator.normalize(userInput).count
     }
 
+    /// Typed part is full-strength, the rest is dimmed: readable in both modes without relying on green.
     private var styledTarget: AttributedString {
         var text = AttributedString(targetPhrase)
         let n = min(correctPrefix, targetPhrase.count)
         let split = text.index(text.startIndex, offsetByCharacters: n)
-        text[text.startIndex..<split].foregroundColor = .green
+        text[text.startIndex..<split].foregroundColor = Color.primary
         text[split..<text.endIndex].foregroundColor = Color.secondary
         return text
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: "keyboard.fill").foregroundStyle(.orange)
-                    Text("TYPING MISSION")
-                        .font(.caption.bold())
-                        .foregroundStyle(.orange)
-                        .tracking(1.5)
-                }
-                Text("Type the phrase")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-            }
-            .padding(.top, 16)
+        ScrollView {
+            VStack(spacing: Spacing.md) {
+                MissionHeader(title: "Type the Phrase", subtitle: "Capitals don't matter")
 
-            Text(styledTarget)
-                .font(.system(.title3, design: .monospaced, weight: .semibold))
-                .lineSpacing(6)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(16)
-                .padding(.horizontal)
-
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Start typing here...", text: $userInput, axis: .vertical)
-                    .focused($isFieldFocused)
-                    .font(.system(.body, design: .monospaced))
-                    .padding()
+                Text(styledTarget)
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                    .lineSpacing(Spacing.xs)
+                    .padding(Spacing.md)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(hasMismatch ? Color.red : Color.clear, lineWidth: 2)
-                    )
-                    .foregroundStyle(.primary)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .disabled(hasSucceeded)
-                    .onChange(of: userInput) { old, new in
-                        handleChange(old: old, new: new)
-                    }
+                    .continuousCorners(Radius.md)
+                    .accessibilityLabel(targetPhrase)
 
-                HStack {
-                    Text("\(correctPrefix) / \(TypingValidator.normalize(targetPhrase).count)")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if hasSucceeded {
-                        Label("Verified", systemImage: "checkmark.circle.fill")
-                            .font(.caption.bold())
-                            .foregroundStyle(.green)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    TextField("Start typing", text: $userInput, axis: .vertical)
+                        .focused($isFieldFocused)
+                        .padding(Spacing.md)
+                        .background(Color(.secondarySystemBackground))
+                        .continuousCorners(Radius.md)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                                .stroke(hasMismatch ? Color.red : Color.clear, lineWidth: 2)
+                        )
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .disabled(hasSucceeded)
+                        .onChange(of: userInput) { old, new in
+                            handleChange(old: old, new: new)
+                        }
+
+                    HStack {
+                        if hasMismatch {
+                            Text("Check your last few letters")
+                                .foregroundStyle(.red)
+                        } else if hasSucceeded {
+                            Label("Done", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("\(correctPrefix) of \(TypingValidator.normalize(targetPhrase).count)")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
                     }
+                    .font(.footnote)
+                    .padding(.horizontal, Spacing.xs)
                 }
-                .padding(.horizontal, 4)
             }
-            .padding(.horizontal)
-
-            Spacer()
+            .padding(Spacing.md)
         }
         .background(Color(.systemBackground))
         .onAppear {

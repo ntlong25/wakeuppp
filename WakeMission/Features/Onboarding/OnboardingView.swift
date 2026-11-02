@@ -5,30 +5,31 @@ struct OnboardingView: View {
     let onFinish: () -> Void
 
     @State private var page = 0
+    @State private var isRequesting = false
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             TabView(selection: $page) {
-                infoPage(icon: "alarm.fill", title: "Wake up. For real.",
-                         text: "Keep using your Clock alarms. WakeMission makes sure you're actually awake before they're over.")
+                infoPage(icon: "alarm.fill", title: "Wake Up. For Real.",
+                         text: "Keep using your Clock alarms. WakeMission makes sure you're awake before they're over.")
                     .tag(0)
-                infoPage(icon: "figure.walk", title: "Missions get you out of bed",
-                         text: "After you stop a Clock alarm, type a phrase, solve math, or show your sink to the camera. Until then, the alarm keeps coming back.")
+                infoPage(icon: "figure.walk", title: "Prove You're Up",
+                         text: "After you stop an alarm, finish a typing, math, or photo mission. Until then, the alarm keeps coming back.")
                     .tag(1)
                 permissionPage.tag(2)
             }
             .tabViewStyle(.page)
+            .indexViewStyle(.page(backgroundDisplayMode: .always))
 
             Button(action: advance) {
-                Text(page < 2 ? "Continue" : "Allow & Start")
+                Text(page < 2 ? "Continue" : "Allow Access")
                     .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .foregroundStyle(Color.onAccent)
+                    .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .disabled(isRequesting)
+            .padding(Spacing.lg)
         }
         .background(Color(.systemBackground))
     }
@@ -38,6 +39,7 @@ struct OnboardingView: View {
             withAnimation { page += 1 }
             return
         }
+        isRequesting = true
         Task {
             await appState.requestAlarmAuthorization()
             _ = await CameraService.requestPermission()
@@ -46,37 +48,53 @@ struct OnboardingView: View {
     }
 
     private func infoPage(icon: String, title: String, text: String) -> some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.md) {
             Spacer()
-            Image(systemName: icon).font(.system(size: 80)).foregroundStyle(.orange)
-            Text(title).font(.largeTitle.bold()).multilineTextAlignment(.center)
-            Text(text).font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Image(systemName: icon)
+                .font(.system(size: 72))
+                .foregroundStyle(.tint)
+                .accessibilityHidden(true)
+                .padding(.bottom, Spacing.sm)
+            Text(title)
+                .font(.largeTitle.bold())
+                .multilineTextAlignment(.center)
+            Text(text)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
             Spacer()
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spacing.xl)
     }
 
     private var permissionPage: some View {
-        VStack(spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
             Spacer()
-            Text("Two permissions").font(.largeTitle.bold())
-            permissionRow(icon: "alarm", title: "Alarms (required)",
-                          text: "Lets WakeMission ring through Silent mode and Focus until you finish.")
-            permissionRow(icon: "camera", title: "Camera (optional)",
-                          text: "Only for the Photo mission. Without it, a math task is used instead.")
+            Text("Allow Access")
+                .font(.largeTitle.bold())
+                .frame(maxWidth: .infinity)
+            permissionRow(icon: "alarm", title: "Alarms",
+                          text: "Required. Rings through Silent mode and Focus until you finish.")
+            permissionRow(icon: "camera", title: "Camera",
+                          text: "Optional. Used only for the Photo mission. Without it, you'll get a math mission instead.")
+            Spacer()
             Spacer()
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spacing.xl)
     }
 
     private func permissionRow(icon: String, title: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: icon).font(.title2).foregroundStyle(.orange).frame(width: 36)
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 36)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title).font(.headline)
                 Text(text).font(.subheadline).foregroundStyle(.secondary)
             }
-            Spacer()
         }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -3,37 +3,52 @@ import SwiftUI
 /// Explains the one-time Shortcuts automation that connects Clock alarms to WakeMission.
 struct ShortcutsGuideView: View {
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("clockSetupDone") private var clockSetupDone = false
 
     private let steps: [String] = [
-        "Create your alarms in the Clock app, as you always do.",
-        "Open Shortcuts and go to the Automation tab, then tap New Automation.",
-        "Choose Alarm, select \"Is Stopped\" (also turn on \"Is Snoozed\" if you use snooze), and pick the alarms or Any Alarm.",
-        "Choose \"Run Immediately\" so it works while the phone is locked.",
-        "Add the action Start Wake-up Missions from WakeMission, then save."
+        "Open Shortcuts, go to Automation, and tap New Automation.",
+        "Choose Alarm, then Is Stopped. Turn on Is Snoozed too if you use snooze.",
+        "Pick Any Alarm, or only the alarms you want missions for.",
+        "Choose Run Immediately so it works while your iPhone is locked.",
+        "Add the Start Wake-up Missions action from WakeMission, then save."
     ]
 
     var body: some View {
         List {
             Section {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, text in
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline, spacing: Spacing.sm + Spacing.xs) {
                         Text("\(index + 1)")
                             .font(.subheadline.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.onAccent)
                             .frame(width: 24, height: 24)
-                            .background(Color.orange, in: Circle())
+                            .background(Color.accentColor, in: Circle())
+                            .accessibilityLabel("Step \(index + 1)")
                         Text(text)
                     }
-                    .padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
                 }
+            } header: {
+                Text("One-time setup")
             } footer: {
-                Text("Wording may differ slightly between iOS versions. After setup, stop a Clock alarm and WakeMission takes over.")
+                Text("Keep your alarms in the Clock app. Wording may differ slightly between iOS versions.")
             }
 
             Section {
                 Button("Open Shortcuts") {
                     if let url = URL(string: "shortcuts://") { openURL(url) }
                 }
+                if clockSetupDone {
+                    Button("Mark as Not Set Up") { clockSetupDone = false }
+                } else {
+                    Button("I've Set This Up") {
+                        clockSetupDone = true
+                        dismiss()
+                    }
+                }
+            } footer: {
+                Text("WakeMission can't see your automations, so this only records what you tell it.")
             }
         }
         .navigationTitle("Connect to Clock")
