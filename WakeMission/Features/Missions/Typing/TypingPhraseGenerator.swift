@@ -27,11 +27,41 @@ struct TypingPhraseGenerator: Sendable {
         "You don't have to be great to start, but you have to start to be great."
     ]
 
-    static func phrases(for difficulty: MissionDifficulty) -> [String] {
+    static let easyPhrasesVI = [
+        "Dậy thôi nào.",
+        "Mở mắt ra đi.",
+        "Ngày mới vui vẻ.",
+        "Bạn làm được mà.",
+        "Ra khỏi giường nào.",
+        "Hôm nay sẽ ổn thôi.",
+        "Cố lên nhé."
+    ]
+
+    static let mediumPhrasesVI = [
+        "Hôm nay là một ngày mới đầy năng lượng.",
+        "Dậy sớm hơn một chút, ngày dài hơn nhiều.",
+        "Rửa mặt, uống nước và bắt đầu ngày mới.",
+        "Mỗi buổi sáng là một cơ hội để làm lại.",
+        "Từng bước nhỏ mỗi ngày sẽ đưa bạn đi xa.",
+        "Giường vẫn ở đó, nhưng hôm nay thì không chờ."
+    ]
+
+    static let hardPhrasesVI = [
+        "Kỷ luật là chọn điều bạn muốn nhất, thay vì điều bạn muốn ngay lúc này.",
+        "Đừng đợi có hứng rồi mới dậy, cứ dậy trước và hứng thú sẽ đến sau.",
+        "Năm phút nữa thường thành một giờ nữa, vậy nên hãy đứng dậy ngay bây giờ.",
+        "Người chiến thắng buổi sáng thường là người chiến thắng cả ngày hôm đó."
+    ]
+
+    /// Phrases follow the language the app is actually running in.
+    static var currentLanguage: String { Bundle.main.preferredLocalizations.first ?? "en" }
+
+    static func phrases(for difficulty: MissionDifficulty, language: String = currentLanguage) -> [String] {
+        let vietnamese = language.hasPrefix("vi")
         switch difficulty {
-        case .easy: return easyPhrases
-        case .medium: return mediumPhrases
-        case .hard: return hardPhrases
+        case .easy: return vietnamese ? easyPhrasesVI : easyPhrases
+        case .medium: return vietnamese ? mediumPhrasesVI : mediumPhrases
+        case .hard: return vietnamese ? hardPhrasesVI : hardPhrases
         }
     }
 

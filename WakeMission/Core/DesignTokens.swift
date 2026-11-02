@@ -28,8 +28,8 @@ extension View {
 
 /// Shared title block for every mission, so the three screens read the same.
 struct MissionHeader: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
 
     var body: some View {
         VStack(spacing: Spacing.xs) {

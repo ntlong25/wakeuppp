@@ -5,7 +5,7 @@ import AVFoundation
 final class PhotoMissionModel: ObservableObject {
     @Published var gauge: Float = 0
     @Published var matched = false
-    @Published var status = "Starting camera..."
+    @Published var status = String(localized: "Starting camera...")
     @Published var showEscape = false
     @Published var completed = false
 
@@ -28,12 +28,12 @@ final class PhotoMissionModel: ObservableObject {
     func start() async {
         let granted = await CameraService.requestPermission()
         guard granted else {
-            status = "Camera access denied - switching to a math task"
+            status = String(localized: "Camera access denied - switching to a math task")
             try? await Task.sleep(for: .seconds(2))
             onFallback()
             return
         }
-        status = usesReference ? "Point at your registered spot" : "Find your bathroom sink"
+        status = usesReference ? String(localized: "Point at your registered spot") : String(localized: "Find your bathroom sink")
 
         let analyzer = self.analyzer
         camera.start(
@@ -62,16 +62,16 @@ final class PhotoMissionModel: ObservableObject {
 
         if done {
             completed = true
-            status = "Verified!"
+            status = String(localized: "Verified!")
             stop()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             onCompleted()
         } else if score.matched && !decider.isFeedLive {
-            status = "Move the camera slightly"
+            status = String(localized: "Move the camera slightly")
         } else if score.matched {
-            status = "Target found! Hold steady..."
+            status = String(localized: "Target found! Hold steady...")
         } else {
-            status = usesReference ? "Point at your registered spot" : "Searching for your bathroom sink..."
+            status = usesReference ? String(localized: "Point at your registered spot") : String(localized: "Searching for your bathroom sink...")
         }
     }
 }

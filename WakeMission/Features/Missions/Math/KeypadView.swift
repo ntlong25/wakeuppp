@@ -61,8 +61,8 @@ struct KeypadView: View {
 
     private func accessibilityName(_ key: String) -> String {
         switch key {
-        case "del": return "Delete"
-        case "ok": return "Submit answer"
+        case "del": return String(localized: "Delete")
+        case "ok": return String(localized: "Submit answer")
         default: return key
         }
     }

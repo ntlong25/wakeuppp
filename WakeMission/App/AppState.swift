@@ -37,7 +37,7 @@ final class AppState: ObservableObject {
         isRinging = true
     }
 
-    /// Debug / "Test Wake-Up Flow": behaves like the Shortcuts automation firing.
+    /// "Test Wake-Up Flow": behaves like answering an alarm.
     func startTestFlow() async {
         await WakeFlow.start()
         consumePending()

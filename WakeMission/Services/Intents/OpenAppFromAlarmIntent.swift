@@ -9,63 +9,50 @@ extension Notification.Name {
 /// Shared entry point for "the wake-up flow starts / continues".
 @MainActor
 enum WakeFlow {
-    /// Starts a session (if none) and arms the first WakeMission alarm.
+    /// A user alarm was answered (or the test was started): start a session if needed and arm a follow-up.
     static func start() async {
         RingingStore.begin()
-        let delay = WakeSettings.load().ringMode.rearmDelay
-        await AlarmService.shared.armNext(after: delay)
-        NotificationCenter.default.post(name: .ringingSessionChanged, object: nil)
+        await armFollowUp()
     }
 
-    /// Called when the user dismisses a WakeMission alarm: arm the next one unless the session is gone.
+    /// A follow-up alarm was dismissed: arm the next one unless the session has ended or expired.
     static func rearm() async {
         guard RingingStore.current() != nil else { return }
+        await armFollowUp()
+    }
+
+    private static func armFollowUp() async {
         let delay = WakeSettings.load().ringMode.rearmDelay
         await AlarmService.shared.armNext(after: delay)
         NotificationCenter.default.post(name: .ringingSessionChanged, object: nil)
     }
 }
 
-/// Run by AlarmKit when the user taps a button on a WakeMission alert. AlarmKit dismisses that alarm,
-/// so we arm the next one right away (it only fires if the missions are still unfinished) and open the app.
+/// Run by AlarmKit when the user taps a button on an alert. AlarmKit dismisses that alarm, so we arm the
+/// next one right away (it only fires if the missions are still unfinished) and open the app.
 struct OpenAppFromAlarmIntent: LiveActivityIntent {
     static var title: LocalizedStringResource { "Wake Up & Start Mission" }
     static var description: IntentDescription { IntentDescription("Opens WakeMission to continue the wake-up missions.") }
     static var openAppWhenRun: Bool { true }
 
-    init() {}
+    @Parameter(title: "Follow-up")
+    var isFollowUp: Bool
+
+    init() {
+        self.isFollowUp = false
+    }
+
+    init(isFollowUp: Bool) {
+        self.isFollowUp = isFollowUp
+    }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await WakeFlow.rearm()
+        if isFollowUp {
+            await WakeFlow.rearm()
+        } else {
+            await WakeFlow.start()
+        }
         return .result()
-    }
-}
-
-/// Exposed to Shortcuts. Used by the automation "When alarm is stopped" -> "Start Wake-up Missions".
-struct StartWakeMissionsIntent: AppIntent {
-    static var title: LocalizedStringResource { "Start Wake-up Missions" }
-    static var description: IntentDescription {
-        IntentDescription("Starts WakeMission's wake-up flow. The alarm rings again until you finish your missions.")
-    }
-    static var openAppWhenRun: Bool { false }
-
-    init() {}
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        await WakeFlow.start()
-        return .result()
-    }
-}
-
-struct WakeMissionShortcuts: AppShortcutsProvider {
-    static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: StartWakeMissionsIntent(),
-            phrases: ["Start wake-up missions with \(.applicationName)"],
-            shortTitle: "Start Wake-up Missions",
-            systemImageName: "alarm.fill"
-        )
     }
 }

@@ -11,10 +11,10 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             TabView(selection: $page) {
                 infoPage(icon: "alarm.fill", title: "Wake Up. For Real.",
-                         text: "Keep using your Clock alarms. WakeMission makes sure you're awake before they're over.")
+                         text: "An alarm that only stops once you're truly awake.")
                     .tag(0)
                 infoPage(icon: "figure.walk", title: "Prove You're Up",
-                         text: "After you stop an alarm, finish a typing, math, or photo mission. Until then, the alarm keeps coming back.")
+                         text: "To turn it off, finish a typing, math, or photo mission. Until then, the alarm keeps coming back.")
                     .tag(1)
                 permissionPage.tag(2)
             }
@@ -47,7 +47,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func infoPage(icon: String, title: String, text: String) -> some View {
+    private func infoPage(icon: String, title: LocalizedStringKey, text: LocalizedStringKey) -> some View {
         VStack(spacing: Spacing.md) {
             Spacer()
             Image(systemName: icon)
@@ -83,7 +83,7 @@ struct OnboardingView: View {
         .padding(.horizontal, Spacing.xl)
     }
 
-    private func permissionRow(icon: String, title: String, text: String) -> some View {
+    private func permissionRow(icon: String, title: LocalizedStringKey, text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: icon)
                 .font(.title2)

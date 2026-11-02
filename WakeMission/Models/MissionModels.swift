@@ -15,13 +15,19 @@ enum MissionType: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var title: String { rawValue }
+    var title: String {
+        switch self {
+        case .typing: return String(localized: "Typing")
+        case .math: return String(localized: "Math")
+        case .photo: return String(localized: "Photo")
+        }
+    }
 
     var subtitle: String {
         switch self {
-        case .typing: return "Type a phrase"
-        case .math: return "Solve arithmetic"
-        case .photo: return "Verify target scene"
+        case .typing: return String(localized: "Type a phrase")
+        case .math: return String(localized: "Solve arithmetic")
+        case .photo: return String(localized: "Verify target scene")
         }
     }
 }
@@ -32,6 +38,14 @@ enum MissionDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
     case hard = "Hard"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .easy: return String(localized: "Easy")
+        case .medium: return String(localized: "Medium")
+        case .hard: return String(localized: "Hard")
+        }
+    }
 }
 
 /// Stored (JSON) in `MissionDraft.configurationData` for photo missions.

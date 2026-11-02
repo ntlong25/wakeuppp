@@ -2,18 +2,18 @@
 
 Supersedes `wakemission_implementation_plan.md`. Behaviour is defined in `docs/SPEC.md`.
 
-## Direction (v2)
-Instead of owning alarms, WakeMission rides on Apple's Clock alarms: a Shortcuts automation ("alarm is stopped") starts the wake-up flow, and a chain of system-owned AlarmKit alarms rings again until the missions are done. The app is only settings + missions.
+## Direction (v3)
+WakeMission owns its alarms again, in a Clock-style UI, so it works with no setup. The Clock + Shortcuts design was dropped because iOS offers no way to create the automation for the user. Follow-up alarms ring until the missions are done.
 
 ## Status
 | Area | Status |
 |---|---|
 | Docs (CLAUDE.md, SPEC, PLAN) | done |
-| Settings store, RingingStore, AlarmService chain, intents, Shortcuts provider | done, **uncompiled** |
+| Alarm store, schedule math, AlarmService, follow-up chain, intent | done, **uncompiled** |
 | Typing / Math / Photo missions, reference registration | done, **uncompiled** |
-| Native-style Home, Missions, Connect-to-Clock guide, Onboarding | done, **uncompiled** |
-| Unit tests (math, typing, photo decider, store, settings) | done, **unrun** |
-| Verify Shortcuts "Alarm is stopped → Run Immediately" while locked on iOS 26/27 | TODO (device) |
+| Clock-style alarm list and editor, Settings tab, Onboarding | done, **uncompiled** |
+| Vietnamese localization | done, **uncompiled** |
+| Unit tests (math, typing, schedule, alarm entry, photo decider, store, settings) | done, **unrun** |
 | Verify 2 s / 5 s AlarmKit fixed alarms are accepted | TODO (device) |
 | Calibrate FeaturePrint thresholds | TODO |
 | App icon | done (`Assets.xcassets/AppIcon`) |

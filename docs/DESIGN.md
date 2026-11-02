@@ -1,5 +1,7 @@
 # WakeMission – Design Critique and Handoff
 
+> Update: the Home screen and Connect to Clock guide below were replaced by a Clock-style Alarms tab and a Settings tab (see `docs/SPEC.md` §5). Tokens and mission screens still apply.
+
 Reviewed from SwiftUI source, without screenshots or a running build. Layout and contrast below are reasoned or calculated, not measured on a device. No Figma file exists; the code is the source of truth.
 
 ## Part 1: Design critique

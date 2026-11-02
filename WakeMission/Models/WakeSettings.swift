@@ -12,11 +12,11 @@ enum RingMode: Int, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .every5: return "Every 5 seconds"
-        case .every10: return "Every 10 seconds"
-        case .every30: return "Every 30 seconds"
-        case .every60: return "Every minute"
-        case .continuous: return "Continuous"
+        case .every5: return String(localized: "Every 5 seconds")
+        case .every10: return String(localized: "Every 10 seconds")
+        case .every30: return String(localized: "Every 30 seconds")
+        case .every60: return String(localized: "Every minute")
+        case .continuous: return String(localized: "Continuous")
         }
     }
 

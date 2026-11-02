@@ -1,7 +1,8 @@
 import Foundation
 
 enum TypingValidator {
-    /// Lowercased, smart punctuation flattened, whitespace collapsed and trimmed.
+    /// Lowercased, accents removed (not everyone has a Vietnamese keyboard), smart punctuation flattened,
+    /// whitespace collapsed and trimmed.
     static func normalize(_ text: String) -> String {
         var s = text
             .replacingOccurrences(of: "\u{2018}", with: "'")
@@ -11,6 +12,8 @@ enum TypingValidator {
             .replacingOccurrences(of: "\u{2013}", with: "-")
             .replacingOccurrences(of: "\u{2014}", with: "-")
         s = s.lowercased()
+            .replacingOccurrences(of: "đ", with: "d")
+            .folding(options: .diacriticInsensitive, locale: nil)
         let parts = s.split(whereSeparator: { $0.isWhitespace })
         return parts.joined(separator: " ")
     }

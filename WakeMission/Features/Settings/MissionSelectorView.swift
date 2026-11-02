@@ -30,7 +30,7 @@ struct MissionSelectorView: View {
                                 Spacer()
 
                                 Picker("Difficulty", selection: $mission.difficulty) {
-                                    ForEach(MissionDifficulty.allCases) { Text($0.rawValue).tag($0) }
+                                    ForEach(MissionDifficulty.allCases) { Text($0.title).tag($0) }
                                 }
                                 .labelsHidden()
                                 .pickerStyle(.menu)

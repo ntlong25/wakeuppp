@@ -4,6 +4,7 @@ import SwiftUI
 struct WakeMissionApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var settingsStore = SettingsStore()
+    @StateObject private var alarmStore = AlarmStore()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -11,12 +12,17 @@ struct WakeMissionApp: App {
             RootView()
                 .environmentObject(appState)
                 .environmentObject(settingsStore)
+                .environmentObject(alarmStore)
                 .task {
+                    alarmStore.disableExpiredAlarms()
                     await appState.refreshAuthorizationIfOnboarded()
                     appState.consumePending()
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { appState.consumePending() }
+                    if phase == .active {
+                        alarmStore.disableExpiredAlarms()
+                        appState.consumePending()
+                    }
                 }
                 .fullScreenCover(isPresented: $appState.isRinging) {
                     WakeUpContainerView(missions: settingsStore.settings.missions)
@@ -31,7 +37,12 @@ struct RootView: View {
 
     var body: some View {
         if onboardingDone {
-            HomeView()
+            TabView {
+                AlarmListView()
+                    .tabItem { Label("Alarms", systemImage: "alarm.fill") }
+                SettingsView()
+                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+            }
         } else {
             OnboardingView { onboardingDone = true }
         }

@@ -41,11 +41,98 @@ final class TypingValidatorTests: XCTestCase {
     }
 
     func testAllPhrasesAreSelfMatching() {
-        for d in MissionDifficulty.allCases {
-            for p in TypingPhraseGenerator.phrases(for: d) {
-                XCTAssertTrue(TypingValidator.isMatch(input: p, target: p))
+        for language in ["en", "vi"] {
+            for d in MissionDifficulty.allCases {
+                for p in TypingPhraseGenerator.phrases(for: d, language: language) {
+                    XCTAssertTrue(TypingValidator.isMatch(input: p, target: p))
+                }
             }
         }
+    }
+
+    func testVietnameseCanBeTypedWithoutAccents() {
+        XCTAssertTrue(TypingValidator.isMatch(input: "day thoi nao.", target: "Dậy thôi nào."))
+        XCTAssertTrue(TypingValidator.isMatch(input: "dung doi", target: "Đừng đợi"))
+    }
+
+    func testAccentFoldingKeepsPrefixAlignedWithTarget() {
+        let target = "Dậy thôi"
+        XCTAssertEqual(TypingValidator.normalize(target).count, target.count)
+        XCTAssertEqual(TypingValidator.correctPrefixLength(input: "day", target: target), 3)
+    }
+
+    func testPhrasesFollowLanguage() {
+        XCTAssertEqual(TypingPhraseGenerator.phrases(for: .easy, language: "vi"), TypingPhraseGenerator.easyPhrasesVI)
+        XCTAssertEqual(TypingPhraseGenerator.phrases(for: .easy, language: "en"), TypingPhraseGenerator.easyPhrases)
+    }
+}
+
+final class AlarmScheduleMathTests: XCTestCase {
+    private var cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }()
+
+    private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int, _ min: Int) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+    }
+
+    func testOneShotLaterToday() {
+        let next = AlarmScheduleMath.nextFireDate(hour: 7, minute: 30, repeatDays: [], after: date(2026, 1, 5, 6, 0), calendar: cal)
+        XCTAssertEqual(next, date(2026, 1, 5, 7, 30))
+    }
+
+    func testOneShotAlreadyPassedGoesToTomorrow() {
+        let next = AlarmScheduleMath.nextFireDate(hour: 7, minute: 30, repeatDays: [], after: date(2026, 1, 5, 8, 0), calendar: cal)
+        XCTAssertEqual(next, date(2026, 1, 6, 7, 30))
+    }
+
+    func testAcrossMidnight() {
+        let next = AlarmScheduleMath.nextFireDate(hour: 0, minute: 1, repeatDays: [], after: date(2026, 1, 5, 23, 59), calendar: cal)
+        XCTAssertEqual(next, date(2026, 1, 6, 0, 1))
+    }
+
+    func testRepeatPicksSoonestWeekday() {
+        // 2026-01-05 is a Monday. Wed(4) and Fri(6) -> Wed 2026-01-07.
+        let next = AlarmScheduleMath.nextFireDate(hour: 7, minute: 0, repeatDays: [6, 4], after: date(2026, 1, 5, 12, 0), calendar: cal)
+        XCTAssertEqual(next, date(2026, 1, 7, 7, 0))
+    }
+
+    func testRepeatTodayIfStillAhead() {
+        let next = AlarmScheduleMath.nextFireDate(hour: 7, minute: 0, repeatDays: [2], after: date(2026, 1, 5, 6, 0), calendar: cal)
+        XCTAssertEqual(next, date(2026, 1, 5, 7, 0))
+    }
+}
+
+final class AlarmEntryTests: XCTestCase {
+    func testOneShotExpiresAfterItsFireDate() {
+        let fire = Date()
+        let alarm = AlarmEntry(hour: 7, minute: 0, oneShotFireDate: fire)
+        XCTAssertFalse(alarm.isExpired(now: fire.addingTimeInterval(-1)))
+        XCTAssertTrue(alarm.isExpired(now: fire.addingTimeInterval(1)))
+    }
+
+    func testRepeatingAlarmNeverExpires() {
+        let alarm = AlarmEntry(hour: 7, minute: 0, repeatDays: [2], oneShotFireDate: Date.distantPast)
+        XCTAssertFalse(alarm.isExpired())
+    }
+
+    func testDisabledAlarmIsNotExpired() {
+        let alarm = AlarmEntry(hour: 7, minute: 0, isEnabled: false, oneShotFireDate: Date.distantPast)
+        XCTAssertFalse(alarm.isExpired())
+    }
+
+    func testWeekOrderStartsOnFirstWeekday() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.firstWeekday = 2
+        XCTAssertEqual(AlarmEntry.weekOrder(calendar: cal), [2, 3, 4, 5, 6, 7, 1])
+    }
+
+    func testCodableRoundTrip() throws {
+        let alarm = AlarmEntry(hour: 6, minute: 45, label: "Gym", repeatDays: [2, 4])
+        let decoded = try JSONDecoder().decode(AlarmEntry.self, from: JSONEncoder().encode(alarm))
+        XCTAssertEqual(decoded, alarm)
     }
 }
 

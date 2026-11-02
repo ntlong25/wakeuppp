@@ -32,7 +32,7 @@ final class MissionCoordinator: ObservableObject {
     var totalMissionsCount: Int { steps.count }
 
     var currentStepDisplay: String {
-        "Mission \(min(currentIndex + 1, totalMissionsCount)) of \(totalMissionsCount)"
+        String(localized: "Mission \(min(currentIndex + 1, totalMissionsCount)) of \(totalMissionsCount)")
     }
 
     var overallProgress: Double {
